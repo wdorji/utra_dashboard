@@ -1,0 +1,68 @@
+<html>
+  <head>
+    <title>data loader</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css" /> -->
+    <script src="/rtl/jquery.js"></script>
+    <script src="/rtl/smq.js"></script>
+    <script>
+      $(function () {
+        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
+        // var smq = SMQ.Client("wss://simplemq.com/smq.lsp");
+
+        function onIP(msg, ftid) {
+          if (msg === "getVal") {
+            fetch("https://api.ipify.org?format=json")
+              .then((response) => response.json())
+              .then((data) => {
+                smq.publish(data.ip, "ipAddress");
+              });
+          }
+        }
+
+        smq.subscribe("ipAddress", { onmsg: onIP, datatype: "text" });
+
+        var num = 0;
+        function sendChatMsg() {
+          smq.publish("sample chat message here ....", "BasicChatMsg");
+
+          const curRow = {
+            time: num.toString(),
+            state: "inter_obs",
+            elapsed: num.toString(),
+          };
+
+          smq.pubjson(curRow, "tableView");
+
+          return false;
+        }
+
+        function insertRows() {
+          var seconds = 0;
+          var interval = setInterval(function () {
+            seconds++;
+            const curRow = {
+              time: seconds.toString(),
+              state: "inter_obs",
+              elapsed: seconds.toString(),
+            };
+
+            smq.pubjson(curRow, "tableView");
+
+            if (seconds > 20) {
+              clearInterval(interval);
+            }
+          }, 1000);
+
+          return false;
+        }
+
+        $("#chat").click(sendChatMsg);
+        $("#table").click(insertRows);
+      });
+    </script>
+  </head>
+  <body>
+    <button id="chat">Send Chat</button>
+    <button id="table">Send Table Data</button>
+  </body>
+</html>

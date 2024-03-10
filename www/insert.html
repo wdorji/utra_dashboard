@@ -1,0 +1,99 @@
+<html>
+  <style>
+    #msg {
+      width: 100%;
+    }
+    #messages li {
+      padding: 5px 10px;
+    }
+    #messages li.enter {
+      color: #1c82a1;
+    }
+    #messages li.leave {
+      color: #b4201e;
+    }
+    #messages {
+      width: 800px;
+      height: 500px;
+      background: #414141;
+    }
+  </style>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+    <title>sqlite insertion</title>
+    <script src="/rtl/jquery.js"></script>
+    <script src="/rtl/smq.js"></script>
+    <script>
+      $(function () {
+        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
+        // var smq = SMQ.Client("wss://simplemq.com/smq.lsp");
+
+        function insertScript() {
+          var fileName = document.getElementById("input1").value.trim();
+          var category = document.getElementById("input2").value.trim();
+          const currentCode = view.state.doc.text.join("\n");
+
+          if (fileName !== "") {
+            const dataJson = {
+              alias: fileName,
+              category: category,
+              content: currentCode,
+            };
+
+            smq.pubjson(dataJson, "insert_data_request");
+          } else {
+            // Display an error message or take appropriate action
+            alert("Please specify a name for file!");
+          }
+        }
+
+        $("#insertData").click(insertScript);
+      });
+    </script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header__content">
+        <!-- <a class="logo"> </a> -->
+
+        <nav class="nav">
+          <ul class="nav__list">
+            <li class="nav__item">
+              <a class="nav__link" href=".">Tables</a>
+            </li>
+            <li class="nav__item">
+              <a class="nav__link" href="stim.html">STIM</a>
+            </li>
+            <li class="nav__item">
+              <a class="active" href="chat.html">Chat</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <div>
+      <input type="text" id="input1" placeholder="Enter alias" />
+      <input type="text" id="input2" placeholder="Enter category" />
+      <div id="editor"></div>
+      <button id="insertData">Insert Data</button>
+    </div>
+
+    <script src="editor.bundle.js"></script>
+    <script>
+      // Create an initial state for the view
+      const initialState = cm6.createEditorState("");
+      const view = cm6.createEditorView(
+        initialState,
+        document.getElementById("editor")
+      );
+    </script>
+  </body>
+</html>

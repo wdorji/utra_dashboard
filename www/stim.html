@@ -1,0 +1,351 @@
+<html>
+  <style>
+    /* Set editor dimensions */
+    #editor {
+      height: 420px;
+      width: 95%;
+      margin: 2%;
+    }
+
+    /* Stretch editor to fit inside its containing div */
+    .cm-editor {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+
+    <title>STIM</title>
+    <script src="/rtl/jquery.js"></script>
+    <script src="/rtl/smq.js"></script>
+    <script>
+      $(function () {
+        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
+
+        var revertState = cm6.createEditorState(
+          "function foo() {\n    console.log(123);\n}"
+        );
+
+        var latestFilename = "";
+        var latestCategory = ""
+        var latestContent = "";
+        var tabs = []//array holding current tabs that are rendered
+
+        // Create an object to store directories that have been created already
+        const directoryMap = {};
+
+        function handleFileButtonClick(fileName, filePath) {
+
+          const tabElements = document.getElementsByClassName("tablinks")[0].children
+          for (let i=0;i<tabElements.length;i++){
+            const curButtonComponent = tabElements[i]
+            curButtonComponent.classList.remove("active")
+            if (curButtonComponent.getAttribute("data-path") == filePath){
+              curButtonComponent.classList.add("active")
+            }
+          }
+
+
+          const script  = {
+              alias: fileName,
+              category: filePath,
+            };
+          latestFilename = fileName;
+          latestCategory = filePath
+          smq.pubjson(script, "file_content_request");
+          
+        }
+
+        function createTabButton(fileName, filePath){
+
+          var index = tabs.indexOf([fileName,filePath]);
+          console.log(tabs)
+          console.log(index)
+          if (index === -1) { // if tab is not yet created
+
+            const tabElements = document.getElementsByClassName("tablinks")
+
+            tabs.push([fileName,filePath])
+            const tabButtonComponent = document.createElement("div");
+            tabButtonComponent.className = "buttons-wrapper"
+            tabButtonComponent.setAttribute("data-filename", fileName);
+            tabButtonComponent.setAttribute("data-path", filePath);
+
+
+            const tabOpenButton = document.createElement("button");
+            tabOpenButton.innerHTML = fileName
+            
+            tabOpenButton.addEventListener("click", function() {
+              handleFileButtonClick(fileName, filePath)
+            });
+
+            const tabCloseButton = document.createElement("button");
+            tabCloseButton.innerHTML = "&#x2715;"
+
+            tabCloseButton.addEventListener("click", function() {
+              index = tabs.indexOf([fileName,filePath]);
+              tabs.splice(index, 1)
+              tabButtonComponent.remove()
+
+              if (tabs.length > 0){
+                handleFileButtonClick(tabs[0][0], tabs[0][1])
+              }
+            });
+
+            tabButtonComponent.appendChild(tabOpenButton)
+            tabButtonComponent.appendChild(tabCloseButton)
+
+            
+
+            tabElements[0].append(tabButtonComponent)
+            
+          }
+
+
+          handleFileButtonClick(fileName, filePath)
+          
+        }
+
+        
+
+        function onFileName(msg, ftid) {
+          const fileName = msg.alias // Extract file name from path
+          const filePath = msg.category
+
+          const directories = filePath.split('/').slice(0, -1)
+
+          var uiElement = $(".sidebar")
+          var spacing = 0
+
+          if (directories.length !== 0){
+
+            directories.forEach(directory => {
+
+              if (!directoryMap[directory]){//if directory not rendered yet
+
+                const directoryName = document.createElement("div");
+                directoryName.setAttribute("data-directory", directory);
+                directoryName.innerHTML = "&#9656; "+directoryName.getAttribute("data-directory");//right
+                
+                directoryName.style.marginLeft = spacing
+                
+
+                const directoryList = document.createElement("sidebar");
+                
+                
+                directoryName.addEventListener("click",
+                function() {
+
+                  if (directoryList.style.display === "none") {
+                    directoryList.style.display = "block";
+                    directoryName.innerHTML = "&#9662; "+directoryName.getAttribute("data-directory");//down
+                  } else {
+                    directoryList.style.display = "none";
+                    directoryName.innerHTML = "&#9656; "+directoryName.getAttribute("data-directory");//right
+                  }
+                });
+
+
+                directoryList.style.display = "none";
+                uiElement.append(directoryName)
+                uiElement.append(directoryList)
+                uiElement = directoryList
+                directoryMap[directory] = uiElement;
+
+              }
+
+              uiElement = directoryMap[directory]
+              spacing += 10
+              
+            });
+          }
+          
+
+          const button = document.createElement("button");
+          button.textContent = fileName;
+          button.setAttribute("data-filename", fileName) // Set data attribute for filename
+          button.setAttribute("data-path", filePath)     // Set data attribute for path
+          button.addEventListener("click", function() {
+              // Add your button click action here
+              createTabButton(button.getAttribute("data-filename"), button.getAttribute("data-path"))
+          });
+          
+          // $(".sidebar").append(button);
+          uiElement.append(button)
+        }
+
+        function onFileContent(msg, ftid) {
+          // Create a new state for the view
+          const newState = cm6.createEditorState(msg);
+          revertState = newState;
+          view.setState(newState);
+        }
+
+        function revertOriginalContent() {
+          view.setState(revertState);
+        }
+
+        function saveCurrentContent() {
+          const currentCode = view.state.doc.text.join("\n");
+          revertState = view.state;
+
+          const changeJson = {
+            fileName: latestFilename,
+            code: currentCode,
+            category: latestCategory
+          };
+
+          smq.pubjson(changeJson, "file_overwrite_request");
+          // smq.publish(currentCode, "file_overwrite_request");
+        }
+
+        smq.subscribe("file_names_response", {
+          onmsg: onFileName,
+          datatype: "json",
+        });
+
+        smq.publish("signal", "file_names_request");
+
+        smq.subscribe("file_content_response", {
+          onmsg: onFileContent,
+          datatype: "text",
+        });
+
+        $("#revert").click(revertOriginalContent);
+
+        $("#save").click(saveCurrentContent);
+      });
+    </script>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header__content">
+        <!-- <a class="logo"> </a> -->
+
+        <nav class="nav">
+          <ul class="nav__list">
+            <li class="nav__item">
+              <a class="nav__link" href=".">Tables</a>
+            </li>
+            <li class="nav__item">
+              <a class="active" href="stim.html">STIM</a>
+            </li>
+            <li class="nav__item">
+              <a class="nav__link" href="chat.html">Chat</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <div class="editor__body">
+      <!-- Sidebar -->
+      <div style="display: flex">
+        <div class="sidebar" ><h3 style="margin-left: 0;">Files:</h1></div>
+
+        <div class="tab">
+          <div class="tablinks">
+
+            <!-- <div class="buttons-wrapper">
+              <button id="openFileButton" onclick="alert('outer')">
+                sample1.lua
+                  </button>
+              <button id="closeFileButton" onclick="alert('inner')">
+                &#x2715;
+                  </button>
+            </div>
+            <div class="buttons-wrapper">
+              <button id="openFileButton" onclick="alert('outer')">
+                sample1.lua
+                  </button>
+              <button id="closeFileButton" onclick="alert('inner')">
+                &#x2715;
+                  </button>
+            </div>
+            <div class="buttons-wrapper">
+              <button id="openFileButton" onclick="alert('outer')">
+                sample1.lua
+                  </button>
+              <button id="closeFileButton" onclick="alert('inner')">
+                &#x2715;
+                  </button>
+            </div> -->
+            
+            
+            
+          </div>
+          <div id="editor"></div>
+        </div>
+        
+        
+        
+      </div>
+
+      <div style="margin-left: 80%;"><button class="btn primary" id="save">Save</button>
+        <button class="btn danger" id="revert">Revert</button></div>
+    </div>
+
+    <!-- Codemirror -->
+    <script src="editor.bundle.js"></script>
+    <script>
+      const statesEl = document.getElementById("states");
+      const saveStateEl = document.getElementById("saveState");
+      const loadStateEl = document.getElementById("loadState");
+
+      // Create an initial state for the view
+      const initialState = cm6.createEditorState("");
+      const view = cm6.createEditorView(
+        initialState,
+        document.getElementById("editor")
+      );
+      let states = { "Initial State": initialState };
+
+      function populateSelect() {
+        statesEl.innerHTML = "";
+
+        for (let key of Object.keys(states)) {
+          var option = document.createElement("option");
+          option.value = key;
+          option.text = key;
+          statesEl.appendChild(option);
+        }
+      }
+
+      let stateNum = 1;
+      function saveState() {
+        let stateName = `Saved State ${stateNum++}`;
+        states[stateName] = view.state;
+        populateSelect();
+        statesEl.value = stateName;
+      }
+
+      function loadState() {
+        view.setState(states[statesEl.value]);
+      }
+
+      populateSelect();
+
+
+      function openCity(evt, cityName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+          tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(cityName).style.display = "block";
+        evt.currentTarget.className += " active";
+      }
+    </script>
+  </body>
+</html>

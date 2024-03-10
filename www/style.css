@@ -1,0 +1,408 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+/* BASE STYLES */
+body {
+  background-color: #e8f0f7;
+  font-family: "Inter", sans-serif;
+  padding-top: 60px;
+}
+
+/* NORMAL STYLES */
+.header {
+  background-color: rgb(19, 22, 26);
+  position: fixed;
+  width: 100%;
+  top: 0;
+}
+
+.header__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  max-width: 1200px;
+  padding: 0 30px;
+  margin: 0 auto;
+}
+
+.logo {
+}
+
+.logo__img {
+  height: 20px;
+  display: block;
+}
+
+.nav {
+}
+
+.nav__list {
+  display: flex;
+  column-gap: 40px;
+}
+
+.nav__item {
+}
+
+.nav__link {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 15px;
+  transition: all 0.4s;
+  position: relative;
+}
+
+.nav__link:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.nav__link::after {
+  content: "";
+  height: 2px;
+  width: 100%;
+  background-color: rgb(0, 183, 255);
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  transition: all 0.2s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nav__link:hover::after {
+  opacity: 1;
+}
+
+.nav__item a.active {
+  color: #fff;
+  background-color: #0071e3;
+  padding: 7px 18px;
+  border-radius: 1000px;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+/* MEDIA QUERIES */
+@media (max-width: 650px) {
+  .header__content {
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 0;
+    row-gap: 18px;
+  }
+
+  .nav__list {
+    column-gap: 20px;
+  }
+}
+
+.table__body {
+  width: 95%;
+  max-height: calc(50% - 1.6rem);
+  background-color: #fffb;
+
+  margin: 0.8rem auto;
+  border-radius: 0.6rem;
+
+  overflow: auto;
+  overflow: overlay;
+}
+
+.table__body::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.table__body::-webkit-scrollbar-thumb {
+  border-radius: 0.5rem;
+  background-color: #0004;
+  visibility: hidden;
+}
+
+.table__body:hover::-webkit-scrollbar-thumb {
+  visibility: visible;
+}
+
+table {
+  width: 100%;
+}
+
+td img {
+  width: 36px;
+  height: 36px;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+
+  vertical-align: middle;
+}
+
+table,
+th,
+td {
+  border-collapse: collapse;
+  padding: 1rem;
+  text-align: left;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  left: 0;
+  background-color: #d5d1defe;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #0000000b;
+}
+
+tbody tr {
+  --delay: 0.1s;
+  transition: 0.5s ease-in-out var(--delay), background-color 0s;
+}
+
+tbody tr.hide {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+tbody tr td,
+tbody tr td p,
+tbody tr td img {
+  transition: 0.2s ease-in-out;
+}
+
+tbody tr.hide td,
+tbody tr.hide td p {
+  padding: 0;
+  font: 0 / 0 sans-serif;
+  transition: 0.2s ease-in-out 0.5s;
+}
+
+tbody tr.hide td img {
+  width: 0;
+  height: 0;
+  transition: 0.2s ease-in-out 0.5s;
+}
+
+.status {
+  padding: 0.4rem 0;
+  border-radius: 2rem;
+  text-align: center;
+}
+
+.status.delivered {
+  background-color: #86e49d;
+  color: #006b21;
+}
+
+.status.cancelled {
+  background-color: #d893a3;
+  color: #b30021;
+}
+
+.status.pending {
+  background-color: #ebc474;
+}
+
+.status.shipped {
+  background-color: #6fcaea;
+}
+
+@media (max-width: 1000px) {
+  td:not(:first-of-type) {
+    min-width: 12.1rem;
+  }
+}
+
+thead th span.icon-arrow {
+  display: inline-block;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  border: 1.4px solid transparent;
+
+  text-align: center;
+  font-size: 1rem;
+
+  margin-left: 0.5rem;
+  transition: 0.2s ease-in-out;
+}
+
+/* thead th.active span.icon-arrow {
+  background-color: #6c00bd;
+  color: #fff;
+} */
+
+thead th.asc span.icon-arrow {
+  transform: rotate(180deg);
+}
+
+thead th.active,
+tbody td.active {
+  color: #6c00bd;
+}
+
+.sidebar {
+  margin: 2%;
+  padding: 4;
+  width: 200px;
+  background-color: #f1f1f1;
+  height: 500px;
+  overflow: auto;
+}
+
+.sidebar button {
+  display: block;
+  color: black;
+  width: 100%;
+  border: none;
+  text-decoration: none;
+}
+
+.sidebar button.active {
+  background-color: #04aa6d;
+  color: white;
+}
+
+.sidebar button:hover:not(.active) {
+  background-color: #555;
+  color: white;
+}
+
+div.content {
+  margin-left: 200px;
+  padding: 1px 16px;
+  height: 1000px;
+}
+
+@media screen and (max-width: 700px) {
+  .sidebar {
+    width: 500px;
+    height: auto;
+    position: relative;
+  }
+  .sidebar button {
+    float: left;
+  }
+  div.content {
+    margin-left: 0;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .sidebar button {
+    text-align: center;
+    float: none;
+  }
+}
+
+.btn,
+input[type="submit"] {
+  display: inline-block;
+  padding: 10px 33px;
+  margin: 8px;
+  border-radius: 4px;
+  color: var(--text-main);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 20px;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.btn.danger {
+  background: rgb(214, 74, 74);
+}
+
+.btn.primary {
+  background: greenyellow;
+}
+
+.editor__body {
+  width: 95%;
+  height: 95%;
+  background-color: rgba(168, 164, 164, 0.733);
+
+  margin: 0.8rem auto;
+  border-radius: 0.6rem;
+
+  overflow: auto;
+  overflow: overlay;
+}
+/* Style the tab */
+.tab {
+  width: 100%;
+  margin: 2%;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+  margin: 3;
+  border-radius: 1000px;
+  background-color: #ddd;
+
+  float: left;
+  border: none;
+
+  height: 35;
+  padding: 11px 11px;
+
+  font-size: 15px;
+}
+
+.tab .tablinks {
+  background-color: #ddd;
+  width: 100%;
+  height: 40;
+  display: flex;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #d2d1d1;
+}
+
+.tab .tablinks .buttons-wrapper {
+  height: 40;
+  background-color: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* border-left: 1px solid; */
+  border-right: 1px solid;
+  padding: 10;
+}
+
+.tab .tablinks .buttons-wrapper.active {
+  background-color: #f1f1f1;
+}
+
+/* Style the tab content */
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}

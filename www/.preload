@@ -1,0 +1,189 @@
+
+
+-- Setup connection to SMQ hub
+local smq = require("smq.hub").create()
+smq:create("eventlog")
+smq:create("ess")
+smq:create("qpcs")
+smq:create("action")
+smq:create("xterm_command")
+smq:create("error")
+smq:create("print")
+
+local function smqEntry(_ENV)
+   --trace("New SMQ client")
+   smq:connect(request)
+end
+
+local smqDir = ba.create.dir("QPCSBroker")
+smqDir:setfunc(smqEntry)
+smqDir:insert()
+print("Installing broker entry at:",smqDir:baseuri())
+
+if app.mySmqBrokerDir then
+   print"Removing old broker"
+   app.mySmqBrokerDir:unlink()
+end
+app.mySmqBrokerDir = smqDir
+
+
+-- require "lfs"
+
+-- -- Start getting file names functionality
+
+-- local function dirtree(dir)
+--     assert(dir and dir ~= "", "Please pass directory parameter")
+--     if string.sub(dir, -1) == "/" then
+--         dir=string.sub(dir, 1, -2)
+--     end
+
+--     local function yieldtree(dir)
+--         for entry in lfs.dir(dir) do
+--             if entry ~= "." and entry ~= ".." then
+--                 entry=dir.."/"..entry
+--                 local attr=lfs.attributes(entry)
+--                 coroutine.yield(entry,attr)
+--                 if attr.mode == "directory" then
+--                     yieldtree(entry)
+--                 end
+--             end
+--         end
+--     end
+
+--     return coroutine.wrap(function() yieldtree(dir) end)
+-- end
+
+-- local function send_file_names()
+    
+--     for filename, attr in dirtree("./www/public/") do
+--         smq:publish(filename, "file_names_response")
+--     end
+-- end
+
+-- -- End getting file names functionality
+
+-- smq:subscribe("file_names_request", {onmsg=send_file_names})
+
+-- local io = require "io"
+
+-- local function send_file_content(msg, ftid)
+
+--     -- Open the file in read mode
+
+--     local file = io.open("www/public/" .. msg, "r")
+
+--     if file then
+--         -- Read the contents of the file
+--         local content = file:read("*all")
+        
+--         smq:publish(content, "file_content_response")
+        
+--         -- Close the file
+--         file:close()
+--     else
+--         -- Print an error message if the file couldn't be opened
+--         print("Error: Unable to open the file")
+--     end
+-- end
+
+-- local function overwrite_file_content(msg, ftid)
+--     -- Open the file in write mode
+--     local file = io.open("www/public/" .. msg.fileName, "w+")
+    
+--     if file then
+--         -- Write the content to the file
+--         file:write(msg.code)
+        
+--         -- Close the file
+--         file:close()
+--         print("File overwritten successfully.")
+--     else
+--         -- Print an error message if the file couldn't be opened
+--         print("Error: Unable to open the file for writing")
+--     end
+-- end
+
+-- smq:subscribe("file_overwrite_request", {onmsg=overwrite_file_content, json=true})
+
+local su=require"sqlutil" -- Load SQL utility library
+if not su.exist"file" then
+   -- Create a database environment object and open data/file.sqlite.db
+   local env,conn = su.open"file"
+   conn:execute"CREATE TABLE scripts (alias TEXT PRIMARY KEY, content TEXT, category TEXT)"
+   su.close(env,conn)
+end
+
+-- Start getting file names functionality
+
+local function send_file_names()
+    local env,conn = su.open"file"
+    local function execute(cur) -- su.select() callback function
+        local alias,content,category = cur:fetch()
+        while alias do
+            local script = {alias= alias,category= category}
+            smq:publish(ba.json.encode(script), "file_names_response")
+            alias,content,category = cur:fetch()
+        end
+    end
+
+    su.select(conn,"alias,content,category FROM scripts",execute)
+    su.close(env,conn)
+end
+
+-- End getting file names functionality
+
+smq:subscribe("file_names_request", {onmsg=send_file_names})
+
+local function send_file_content(msg, ftid)
+
+    local env,conn = su.open"file"
+    local function execute(cur) -- su.select() callback function
+        local alias,content,category = cur:fetch()
+        while alias do
+            if alias == msg.alias and category == msg.category then 
+                smq:publish(content, "file_content_response")
+                break 
+            end
+            
+            alias,content,category = cur:fetch()
+        end
+    end
+    su.select(conn,"alias,content,category FROM scripts",execute)
+    su.close(env,conn)
+end
+
+smq:subscribe("file_content_request", {onmsg=send_file_content, json=true})
+
+local function insert_data(msg, ftid)
+    print("reached")  
+    local alias=luasql.quotestr(msg.alias)-- Quote msg and prevent SQL injection by escaping any ' characters
+    local content=luasql.quotestr(msg.content)
+    local category=luasql.quotestr(msg.category)
+    local sql=string.format("INSERT INTO scripts (alias, content, category) values(%s, %s, %s)",alias, content, category)
+    local env,conn = su.open"file"
+    local ok,err=conn:execute(sql) -- Insert msg into database
+    if ok then 
+        print("Data inserted!")     
+    else
+        trace("Inserting DB failed",err)
+    end
+    su.close(env,conn)
+end
+
+smq:subscribe("insert_data_request", {onmsg=insert_data, json=true})
+
+
+local function overwrite_file_content(msg, ftid)
+
+   local env,conn = su.open"file"
+   local sql=string.format("UPDATE scripts SET content = '%s' WHERE alias = '%s' AND category = '%s'", msg.code, msg.fileName, msg.category)
+   local ok,err=conn:execute(sql) -- Insert msg into database
+   if ok then 
+       print("Code modified!")     
+   else
+       trace("Code modification failed",err)
+   end
+   su.close(env,conn)
+end
+
+smq:subscribe("file_overwrite_request", {onmsg=overwrite_file_content, json=true})
