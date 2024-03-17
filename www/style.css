@@ -18,7 +18,7 @@ ul {
 body {
   background-color: #e8f0f7;
   font-family: "Inter", sans-serif;
-  padding-top: 60px;
+  padding-top: 40px;
 }
 
 /* NORMAL STYLES */
@@ -261,56 +261,18 @@ tbody td.active {
 
 .sidebar {
   margin: 2%;
+  margin-top: 15%;
+  margin-left: 15%;
   padding: 4;
   width: 200px;
+  border: 1px solid #ccc;
   background-color: #f1f1f1;
   height: 500px;
   overflow: auto;
 }
 
-.sidebar button {
-  display: block;
-  color: black;
-  width: 100%;
-  border: none;
-  text-decoration: none;
-}
-
-.sidebar button.active {
-  background-color: #04aa6d;
-  color: white;
-}
-
-.sidebar button:hover:not(.active) {
-  background-color: #555;
-  color: white;
-}
-
-div.content {
-  margin-left: 200px;
-  padding: 1px 16px;
-  height: 1000px;
-}
-
-@media screen and (max-width: 700px) {
-  .sidebar {
-    width: 500px;
-    height: auto;
-    position: relative;
-  }
-  .sidebar button {
-    float: left;
-  }
-  div.content {
-    margin-left: 0;
-  }
-}
-
-@media screen and (max-width: 400px) {
-  .sidebar button {
-    text-align: center;
-    float: none;
-  }
+.sidebar .fileButton:hover {
+  background-color: rgba(168, 164, 164, 0.733);
 }
 
 .btn,
@@ -329,12 +291,15 @@ input[type="submit"] {
   cursor: pointer;
 }
 
-.btn.danger {
-  background: rgb(214, 74, 74);
+.btn {
+  display: flex;
+  background: rgb(0, 183, 255);
+  width: 100;
+  justify-content: center;
 }
 
-.btn.primary {
-  background: greenyellow;
+.btn:hover {
+  background: #0071e3;
 }
 
 .editor__body {
@@ -342,23 +307,35 @@ input[type="submit"] {
   height: 95%;
   background-color: rgba(168, 164, 164, 0.733);
 
-  margin: 0.8rem auto;
+  margin: 0.3rem auto;
   border-radius: 0.6rem;
 
   overflow: auto;
   overflow: overlay;
 }
-/* Style the tab */
-.tab {
+
+.rightPanel {
   width: 100%;
+  /* display: flex;
+  flex-direction: column; */
+  /* align-items: center; */
+  margin-top: 0.4%;
+  height: 100%;
+  /* background-color: #f1f1f1;
+  border: 1px solid #ccc; */
+}
+/* Style the tab */
+.rightPanel .tab {
+  width: 95%;
   margin: 2%;
   overflow: hidden;
   border: 1px solid #ccc;
   background-color: #f1f1f1;
+  height: 55%;
 }
 
 /* Style the buttons inside the tab */
-.tab button {
+.rightPanel .tab button {
   margin: 3;
   border-radius: 1000px;
   background-color: #ddd;
@@ -372,7 +349,7 @@ input[type="submit"] {
   font-size: 15px;
 }
 
-.tab .tablinks {
+.rightPanel .tab .tablinks {
   background-color: #ddd;
   width: 100%;
   height: 40;
@@ -380,11 +357,11 @@ input[type="submit"] {
 }
 
 /* Change background color of buttons on hover */
-.tab button:hover {
+.rightPanel .tab button:hover {
   background-color: #d2d1d1;
 }
 
-.tab .tablinks .buttons-wrapper {
+.rightPanel .tab .tablinks .buttons-wrapper {
   height: 40;
   background-color: #ddd;
   display: flex;
@@ -395,7 +372,7 @@ input[type="submit"] {
   padding: 10;
 }
 
-.tab .tablinks .buttons-wrapper.active {
+.rightPanel .tab .tablinks .buttons-wrapper.active {
   background-color: #f1f1f1;
 }
 
@@ -405,4 +382,12 @@ input[type="submit"] {
   padding: 6px 12px;
   border: 1px solid #ccc;
   border-top: none;
+}
+
+.rightPanel .bottomContainer {
+  width: 95%;
+  margin: 2%;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
 }

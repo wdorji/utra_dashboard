@@ -109,7 +109,7 @@ local su=require"sqlutil" -- Load SQL utility library
 if not su.exist"file" then
    -- Create a database environment object and open data/file.sqlite.db
    local env,conn = su.open"file"
-   conn:execute"CREATE TABLE scripts (alias TEXT PRIMARY KEY, content TEXT, category TEXT)"
+   conn:execute"CREATE TABLE scripts (key INTEGER PRIMARY KEY, fileName TEXT, content TEXT, filePath TEXT)"
    su.close(env,conn)
 end
 
@@ -118,15 +118,15 @@ end
 local function send_file_names()
     local env,conn = su.open"file"
     local function execute(cur) -- su.select() callback function
-        local alias,content,category = cur:fetch()
-        while alias do
-            local script = {alias= alias,category= category}
+        local key, fileName, filePath = cur:fetch()
+        while key do
+            local script = {key = key, fileName= fileName,filePath= filePath}
             smq:publish(ba.json.encode(script), "file_names_response")
-            alias,content,category = cur:fetch()
+            key, fileName, filePath = cur:fetch()
         end
     end
 
-    su.select(conn,"alias,content,category FROM scripts",execute)
+    su.select(conn,"key,fileName,filePath FROM scripts",execute)
     su.close(env,conn)
 end
 
@@ -138,28 +138,30 @@ local function send_file_content(msg, ftid)
 
     local env,conn = su.open"file"
     local function execute(cur) -- su.select() callback function
-        local alias,content,category = cur:fetch()
-        while alias do
-            if alias == msg.alias and category == msg.category then 
-                smq:publish(content, "file_content_response")
+        local key, content = cur:fetch()
+        
+        while key do
+            if key == msg.key then 
+                local script = {key= key, code= content}
+                
+                smq:publish(ba.json.encode(script), "file_content_response")
                 break 
             end
             
-            alias,content,category = cur:fetch()
+            key,content = cur:fetch()
         end
     end
-    su.select(conn,"alias,content,category FROM scripts",execute)
+    su.select(conn,"key,content FROM scripts",execute)
     su.close(env,conn)
 end
 
 smq:subscribe("file_content_request", {onmsg=send_file_content, json=true})
 
 local function insert_data(msg, ftid)
-    print("reached")  
-    local alias=luasql.quotestr(msg.alias)-- Quote msg and prevent SQL injection by escaping any ' characters
+    local fileName=luasql.quotestr(msg.fileName)-- Quote msg and prevent SQL injection by escaping any ' characters
     local content=luasql.quotestr(msg.content)
-    local category=luasql.quotestr(msg.category)
-    local sql=string.format("INSERT INTO scripts (alias, content, category) values(%s, %s, %s)",alias, content, category)
+    local filePath=luasql.quotestr(msg.filePath)
+    local sql=string.format("INSERT INTO scripts (fileName, content, filePath) values(%s, %s, %s)",fileName, content, filePath)
     local env,conn = su.open"file"
     local ok,err=conn:execute(sql) -- Insert msg into database
     if ok then 
@@ -176,7 +178,7 @@ smq:subscribe("insert_data_request", {onmsg=insert_data, json=true})
 local function overwrite_file_content(msg, ftid)
 
    local env,conn = su.open"file"
-   local sql=string.format("UPDATE scripts SET content = '%s' WHERE alias = '%s' AND category = '%s'", msg.code, msg.fileName, msg.category)
+   local sql=string.format("UPDATE scripts SET content = '%s' WHERE key = '%s'", msg.code, msg.key)
    local ok,err=conn:execute(sql) -- Insert msg into database
    if ok then 
        print("Code modified!")     
@@ -187,3 +189,41 @@ local function overwrite_file_content(msg, ftid)
 end
 
 smq:subscribe("file_overwrite_request", {onmsg=overwrite_file_content, json=true})
+
+local function evaluate_script(msg, ftid)
+    local consoleOutput = {output = msg.code}
+    smq:publish(ba.json.encode(consoleOutput), "console_output")
+    print("script run successful!")
+ end
+ 
+smq:subscribe("run_script_request", {onmsg=evaluate_script, json=true})
+
+local io = require "io"
+
+local function evaluate_command(msg, ftid)
+    
+    -- Define the file to save the output
+    local output_file = "output.txt"
+
+    -- Execute the shell command and redirect the output to the file
+    os.execute(msg .. " > " .. output_file)
+
+    -- Open the file for reading
+    local file = io.open(output_file, "r")
+
+    if file then
+        print("command evaluated")
+        -- Read the contents of the file into a variable
+        local consoleOutput = {output = file:read("*all")}
+        smq:publish(ba.json.encode(consoleOutput), "console_output")
+        file:close()
+    else
+        print("Failed to open file: " .. input_file)
+    end
+end
+ 
+smq:subscribe("evaluate_command_request", {onmsg=evaluate_command})
+
+
+
+

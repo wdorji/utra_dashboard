@@ -37,13 +37,13 @@
 
         function insertScript() {
           var fileName = document.getElementById("input1").value.trim();
-          var category = document.getElementById("input2").value.trim();
+          var filePath = document.getElementById("input2").value.trim();
           const currentCode = view.state.doc.text.join("\n");
 
           if (fileName !== "") {
             const dataJson = {
-              alias: fileName,
-              category: category,
+              fileName: fileName,
+              filePath: filePath,
               content: currentCode,
             };
 
@@ -79,9 +79,9 @@
       </div>
     </header>
 
-    <div>
-      <input type="text" id="input1" placeholder="Enter alias" />
-      <input type="text" id="input2" placeholder="Enter category" />
+    <div style="margin-top: 20%">
+      <input type="text" id="input1" placeholder="Enter filename" />
+      <input type="text" id="input2" placeholder="Enter filepath" />
       <div id="editor"></div>
       <button id="insertData">Insert Data</button>
     </div>

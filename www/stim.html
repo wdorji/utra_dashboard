@@ -2,9 +2,20 @@
   <style>
     /* Set editor dimensions */
     #editor {
-      height: 420px;
-      width: 95%;
-      margin: 2%;
+      height: 100%;
+      width: 98%;
+      margin: 1%;
+    }
+
+    #command {
+      height: 30px;
+      width: 98%;
+      margin: 1%;
+    }
+    #console {
+      height: 180px;
+      width: 98%;
+      margin: 1%;
     }
 
     /* Stretch editor to fit inside its containing div */
@@ -28,76 +39,198 @@
     <script src="/rtl/smq.js"></script>
     <script>
       $(function () {
-        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
 
-        var revertState = cm6.createEditorState(
-          "function foo() {\n    console.log(123);\n}"
-        );
+        let states = new Map(); //map to hold editor states for each file
 
+        let initStates = new Map(); //map to store initial editor states for each file
+        const emptyState = cm6.createEditorState("");
         var latestFilename = "";
-        var latestCategory = ""
+        var latestKey = ""
         var latestContent = "";
         var tabs = []//array holding current tabs that are rendered
 
         // Create an object to store directories that have been created already
         const directoryMap = {};
 
-        function handleFileButtonClick(fileName, filePath) {
+        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
 
+        var revertState = cm6.createEditorState("");
+
+        //hide editors initially
+        document.getElementById("editor").style.display =  "none"
+
+
+        // Add an event listener to save temporary changes in editor
+        document.getElementById("editor").addEventListener("keyup", function() {
+          console.log("change detected")
+          console.log(view.state)
+          // Save state typed into the textarea
+          states.set(latestKey, view.state)
+
+          //check if there is a change
+
+          var unmodified = true
+          
+          if  (view.state.doc.text.length == initStates.get(latestKey).doc.text.length){
+            for (let i=0; i<view.state.doc.text.length; i++){
+              if (view.state.doc.text[i] !== initStates.get(latestKey).doc.text[i]){//modified content
+                unmodified = false
+                break
+              }
+             
+            }
+          }
+
+          else{//change in number of lines
+            unmodified = false
+          }
+
+          console.log(unmodified)
+
+          if (!unmodified){
+            const fileButtons = document.getElementsByClassName("fileButton")
+            for (let i=0; i<fileButtons.length; i++){
+              if (fileButtons[i].getAttribute("data-key") == latestKey){
+                fileButtons[i].textContent = "* "+ latestFilename
+              }
+             
+            }
+          }
+          else{
+            const fileButtons = document.getElementsByClassName("fileButton")
+            for (let i=0; i<fileButtons.length; i++){
+              if (fileButtons[i].getAttribute("data-key") == latestKey){
+                fileButtons[i].textContent = latestFilename
+              }
+             
+            }
+          }
+          
+        });
+
+         // Add an event listener to evaluate command
+        document.getElementById("command").addEventListener("keyup", function() {
+
+          if (event.key === "Enter") {
+            //evaluate command
+            console.log(commandView.state.doc.text[0])
+            smq.publish(commandView.state.doc.text[0], "evaluate_command_request");
+            commandView.setState(emptyState)
+          }
+        });
+
+    
+        function setFileContentState(fileName, key) {
+          console.log("setting", key)
+
+          //request data from server
+          const script  = {
+              fileName: fileName,
+              key: key,
+            };
+          
+          smq.pubjson(script, "file_content_request");
+
+        }
+
+
+        //update editor state to files current state
+        function handleFileButtonClick(fileName, key) {
+
+          latestFilename = fileName;
+          latestKey = key
+
+
+          //make current selected tab active color
           const tabElements = document.getElementsByClassName("tablinks")[0].children
           for (let i=0;i<tabElements.length;i++){
             const curButtonComponent = tabElements[i]
             curButtonComponent.classList.remove("active")
-            if (curButtonComponent.getAttribute("data-path") == filePath){
+            if (curButtonComponent.getAttribute("data-key") == key){
               curButtonComponent.classList.add("active")
             }
           }
 
-
-          const script  = {
-              alias: fileName,
-              category: filePath,
-            };
-          latestFilename = fileName;
-          latestCategory = filePath
-          smq.pubjson(script, "file_content_request");
+          if (states.has(key)){
+            console.log("Settng from map")
+            view.setState(states.get(key));
+          }
+          
           
         }
 
-        function createTabButton(fileName, filePath){
+        function createTabButton(fileName, key){
+          
 
-          var index = tabs.indexOf([fileName,filePath]);
-          console.log(tabs)
-          console.log(index)
+          var index = tabs.indexOf(key);
           if (index === -1) { // if tab is not yet created
 
             const tabElements = document.getElementsByClassName("tablinks")
 
-            tabs.push([fileName,filePath])
+            tabs.push(key)
             const tabButtonComponent = document.createElement("div");
             tabButtonComponent.className = "buttons-wrapper"
             tabButtonComponent.setAttribute("data-filename", fileName);
-            tabButtonComponent.setAttribute("data-path", filePath);
+            tabButtonComponent.setAttribute("data-key", key);
 
 
             const tabOpenButton = document.createElement("button");
             tabOpenButton.innerHTML = fileName
             
             tabOpenButton.addEventListener("click", function() {
-              handleFileButtonClick(fileName, filePath)
+              handleFileButtonClick(fileName, key)
             });
 
             const tabCloseButton = document.createElement("button");
             tabCloseButton.innerHTML = "&#x2715;"
 
             tabCloseButton.addEventListener("click", function() {
-              index = tabs.indexOf([fileName,filePath]);
+
+              const fileButtons = document.getElementsByClassName("fileButton")
+              for (let i=0; i<fileButtons.length; i++){
+                if (fileButtons[i].getAttribute("data-key") == latestKey){
+                  if (fileButtons[i].textContent == "* "+ latestFilename){
+
+                    if (confirm('You have unsaved changes. Click "OK" to save changes and "Cancel" to not save changes.')) {
+                      // Save changes
+                      saveCurrentContent()
+                      
+                    } else {
+                      // Do nothing!
+                      console.log('Thing was not saved to the database.');
+                    }
+                    fileButtons[i].textContent = latestFilename
+
+                  }
+                  
+                }
+              
+              }
+              index = tabs.indexOf(key);
               tabs.splice(index, 1)
               tabButtonComponent.remove()
 
-              if (tabs.length > 0){
-                handleFileButtonClick(tabs[0][0], tabs[0][1])
+              if (index !== 0 && tabs.length > 0){
+                handleFileButtonClick(tabs[index-1], tabs[index-1])
               }
+              else if (tabs.length > 0) {
+                handleFileButtonClick(tabs[0], tabs[0])
+                
+              }
+              else{
+
+                
+                view.setState(emptyState);
+
+                states.delete(key)
+                consoleView.setState(emptyState);
+                commandView.setState(emptyState);
+                
+
+                document.getElementById("editor").style.display =  "none"
+
+              }
+            
             });
 
             tabButtonComponent.appendChild(tabOpenButton)
@@ -107,18 +240,22 @@
 
             tabElements[0].append(tabButtonComponent)
             
+
+            setFileContentState(fileName, key)
           }
 
 
-          handleFileButtonClick(fileName, filePath)
+          handleFileButtonClick(fileName, key)
           
         }
 
         
 
         function onFileName(msg, ftid) {
-          const fileName = msg.alias // Extract file name from path
-          const filePath = msg.category
+          console.log(msg)
+          const fileName = msg.fileName // Extract file name from path
+          const filePath = msg.filePath
+          const key = msg.key
 
           const directories = filePath.split('/').slice(0, -1)
 
@@ -169,28 +306,39 @@
           }
           
 
-          const button = document.createElement("button");
+          const button = document.createElement("div");
           button.textContent = fileName;
+          button.className = "fileButton"
+          button.style.marginLeft = spacing
+          
           button.setAttribute("data-filename", fileName) // Set data attribute for filename
-          button.setAttribute("data-path", filePath)     // Set data attribute for path
+          button.setAttribute("data-key", key)     // Set data attribute for key
           button.addEventListener("click", function() {
-              // Add your button click action here
-              createTabButton(button.getAttribute("data-filename"), button.getAttribute("data-path"))
+              createTabButton(button.getAttribute("data-filename"), button.getAttribute("data-key"))
           });
           
-          // $(".sidebar").append(button);
           uiElement.append(button)
         }
 
+        //function called only when tab is rendered for first time or revert is clicked
         function onFileContent(msg, ftid) {
+
           // Create a new state for the view
-          const newState = cm6.createEditorState(msg);
-          revertState = newState;
+          const newState = cm6.createEditorState(msg.code);
+          // // Set current state
+          // revertState = newState;
+          // view.setState(newState);
+          states.set(msg.key, newState)
+          initStates.set(msg.key, newState)
+
+          console.log("Settng from call")
           view.setState(newState);
+          document.getElementById("editor").style.display =  "block"
+          
         }
 
         function revertOriginalContent() {
-          view.setState(revertState);
+          setFileContentState(latestFilename, latestKey)
         }
 
         function saveCurrentContent() {
@@ -200,11 +348,42 @@
           const changeJson = {
             fileName: latestFilename,
             code: currentCode,
-            category: latestCategory
+            key: latestKey
           };
 
+          const fileButtons = document.getElementsByClassName("fileButton")
+
+          for (let i=0; i<fileButtons.length; i++){
+            if (fileButtons[i].getAttribute("data-key") == latestKey){
+              if (fileButtons[i].textContent == "* "+ latestFilename){
+                fileButtons[i].textContent = latestFilename
+              }
+            }
+          }
+
           smq.pubjson(changeJson, "file_overwrite_request");
-          // smq.publish(currentCode, "file_overwrite_request");
+        }
+
+
+        function runScript(){
+          const currentCode = view.state.doc.text.join("\n");
+
+          const changeJson = {
+            fileName: latestFilename,
+            code: currentCode,
+            key: latestKey
+          };
+
+          smq.pubjson(changeJson, "run_script_request");
+        }
+
+        function printConsoleOutput(msg, ftid) {
+          // Create a new state for the view
+          const newState = cm6.createEditorState(msg.output);
+
+          console.log("Received output")
+          consoleView.setState(newState);
+          
         }
 
         smq.subscribe("file_names_response", {
@@ -216,12 +395,19 @@
 
         smq.subscribe("file_content_response", {
           onmsg: onFileContent,
-          datatype: "text",
+          datatype: "json",
+        });
+
+        smq.subscribe("console_output", {
+          onmsg: printConsoleOutput,
+          datatype: "json",
         });
 
         $("#revert").click(revertOriginalContent);
 
         $("#save").click(saveCurrentContent);
+
+        $('#run').click(runScript)
       });
     </script>
   </head>
@@ -245,107 +431,66 @@
         </nav>
       </div>
     </header>
-    <div class="editor__body">
-      <!-- Sidebar -->
-      <div style="display: flex">
-        <div class="sidebar" ><h3 style="margin-left: 0;">Files:</h1></div>
-
-        <div class="tab">
-          <div class="tablinks">
-
-            <!-- <div class="buttons-wrapper">
-              <button id="openFileButton" onclick="alert('outer')">
-                sample1.lua
-                  </button>
-              <button id="closeFileButton" onclick="alert('inner')">
-                &#x2715;
-                  </button>
-            </div>
-            <div class="buttons-wrapper">
-              <button id="openFileButton" onclick="alert('outer')">
-                sample1.lua
-                  </button>
-              <button id="closeFileButton" onclick="alert('inner')">
-                &#x2715;
-                  </button>
-            </div>
-            <div class="buttons-wrapper">
-              <button id="openFileButton" onclick="alert('outer')">
-                sample1.lua
-                  </button>
-              <button id="closeFileButton" onclick="alert('inner')">
-                &#x2715;
-                  </button>
-            </div> -->
-            
-            
-            
-          </div>
-          <div id="editor"></div>
+    <!-- <div class="editor__body"> -->
+      
+      <div style="display: flex; height: 100%;">
+        <!-- Sidebar -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+        <div class="sidebar" ><h3 >Files:</h1></div>
+          <button class="btn" id="run">Run</button>
+          <button class="btn" id="save">Save</button>
+          <button class="btn" id="revert">Revert</button>
         </div>
+
+        <div class="rightPanel">
+          <div class="tab">
+            <div class="tablinks" style="overflow-x: scroll;">        
+            </div>
+            <div id="editor"></div>
+          </div>
+          <div class="bottomContainer">
+            <div id="command"></div>
+            <div id="console"></div>
+          </div>
+          </div>
+
+       
         
         
         
       </div>
 
-      <div style="margin-left: 80%;"><button class="btn primary" id="save">Save</button>
-        <button class="btn danger" id="revert">Revert</button></div>
-    </div>
+      
+    <!-- </div> -->
 
     <!-- Codemirror -->
     <script src="editor.bundle.js"></script>
     <script>
-      const statesEl = document.getElementById("states");
-      const saveStateEl = document.getElementById("saveState");
-      const loadStateEl = document.getElementById("loadState");
+      // const statesEl = document.getElementById("states");
+      // const saveStateEl = document.getElementById("saveState");
+      // const loadStateEl = document.getElementById("loadState");
 
-      // Create an initial state for the view
+      // Create an initial state for the ediots
       const initialState = cm6.createEditorState("");
+
+      // Create a editor view for code editor
       const view = cm6.createEditorView(
         initialState,
         document.getElementById("editor")
       );
-      let states = { "Initial State": initialState };
 
-      function populateSelect() {
-        statesEl.innerHTML = "";
+      // Create a editor view for inserting commands
+      const commandView = cm6.createEditorView(
+        initialState,
+        document.getElementById("command")
+      );
 
-        for (let key of Object.keys(states)) {
-          var option = document.createElement("option");
-          option.value = key;
-          option.text = key;
-          statesEl.appendChild(option);
-        }
-      }
+      // Create a editor view for viewing results
+      const consoleView = cm6.createEditorView(
+        initialState,
+        document.getElementById("console")
+      );
 
-      let stateNum = 1;
-      function saveState() {
-        let stateName = `Saved State ${stateNum++}`;
-        states[stateName] = view.state;
-        populateSelect();
-        statesEl.value = stateName;
-      }
-
-      function loadState() {
-        view.setState(states[statesEl.value]);
-      }
-
-      populateSelect();
-
-
-      function openCity(evt, cityName) {
-        var i, tabcontent, tablinks;
-        tabcontent = document.getElementsByClassName("tabcontent");
-        for (i = 0; i < tabcontent.length; i++) {
-          tabcontent[i].style.display = "none";
-        }
-        tablinks = document.getElementsByClassName("tablinks");
-        for (i = 0; i < tablinks.length; i++) {
-          tablinks[i].className = tablinks[i].className.replace(" active", "");
-        }
-        document.getElementById(cityName).style.display = "block";
-        evt.currentTarget.className += " active";
-      }
     </script>
   </body>
 </html>
