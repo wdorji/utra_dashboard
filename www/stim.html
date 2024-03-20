@@ -87,20 +87,21 @@
 
           console.log(unmodified)
 
+          const fileButtons = document.getElementsByClassName("buttons-wrapper")
+          console.log("buttons: ",fileButtons)
+
           if (!unmodified){
-            const fileButtons = document.getElementsByClassName("fileButton")
             for (let i=0; i<fileButtons.length; i++){
               if (fileButtons[i].getAttribute("data-key") == latestKey){
-                fileButtons[i].textContent = "* "+ latestFilename
+                fileButtons[i].children[0].textContent = latestFilename + "*"
               }
              
             }
           }
           else{
-            const fileButtons = document.getElementsByClassName("fileButton")
             for (let i=0; i<fileButtons.length; i++){
               if (fileButtons[i].getAttribute("data-key") == latestKey){
-                fileButtons[i].textContent = latestFilename
+                fileButtons[i].children[0].textContent = latestFilename
               }
              
             }
@@ -139,8 +140,7 @@
 
           latestFilename = fileName;
           latestKey = key
-
-
+        
           //make current selected tab active color
           const tabElements = document.getElementsByClassName("tablinks")[0].children
           for (let i=0;i<tabElements.length;i++){
@@ -186,10 +186,10 @@
 
             tabCloseButton.addEventListener("click", function() {
 
-              const fileButtons = document.getElementsByClassName("fileButton")
+              const fileButtons = document.getElementsByClassName("buttons-wrapper")
               for (let i=0; i<fileButtons.length; i++){
                 if (fileButtons[i].getAttribute("data-key") == latestKey){
-                  if (fileButtons[i].textContent == "* "+ latestFilename){
+                  if (fileButtons[i].children[0].textContent == latestFilename + "*"){
 
                     if (confirm('You have unsaved changes. Click "OK" to save changes and "Cancel" to not save changes.')) {
                       // Save changes
@@ -199,7 +199,7 @@
                       // Do nothing!
                       console.log('Thing was not saved to the database.');
                     }
-                    fileButtons[i].textContent = latestFilename
+                    fileButtons[i].children[0].textContent = latestFilename
 
                   }
                   
@@ -323,15 +323,32 @@
         //function called only when tab is rendered for first time or revert is clicked
         function onFileContent(msg, ftid) {
 
+
+          let options = {
+              js: false,
+              lua: false,
+              tcl: false
+          };
+
+          if (msg.fileName.endsWith(".lua")){
+            options.lua = true
+          }
+          if (msg.fileName.endsWith(".js")){
+            options.js = true
+          }
+          if (msg.fileName.endsWith(".tcl")){
+            options.tcl = true
+          }
+          
           // Create a new state for the view
-          const newState = cm6.createEditorState(msg.code);
+          const newState = cm6.createEditorState(msg.code, options);
           // // Set current state
           // revertState = newState;
           // view.setState(newState);
           states.set(msg.key, newState)
           initStates.set(msg.key, newState)
 
-          console.log("Settng from call")
+          console.log("Setting from call")
           view.setState(newState);
           document.getElementById("editor").style.display =  "block"
           
@@ -351,12 +368,12 @@
             key: latestKey
           };
 
-          const fileButtons = document.getElementsByClassName("fileButton")
+          const fileButtons = document.getElementsByClassName("buttons-wrapper")
 
           for (let i=0; i<fileButtons.length; i++){
             if (fileButtons[i].getAttribute("data-key") == latestKey){
-              if (fileButtons[i].textContent == "* "+ latestFilename){
-                fileButtons[i].textContent = latestFilename
+              if (fileButtons[i].children[0].textContent == latestFilename + "*"){
+                fileButtons[i].children[0].textContent = latestFilename
               }
             }
           }
@@ -453,10 +470,6 @@
             <div id="console"></div>
           </div>
           </div>
-
-       
-        
-        
         
       </div>
 

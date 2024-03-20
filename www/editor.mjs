@@ -41,9 +41,10 @@ import { StreamLanguage } from "@codemirror/language";
 import { lua } from "@codemirror/legacy-modes/mode/lua";
 import { javascript } from "@codemirror/lang-javascript";
 
+import { tcl } from "@codemirror/legacy-modes/mode/tcl";
+
 function createEditorState(initialContents, options = {}) {
   let extensions = [
-    lineNumbers(),
     highlightActiveLineGutter(),
     highlightSpecialChars(),
     history(),
@@ -67,11 +68,24 @@ function createEditorState(initialContents, options = {}) {
       ...foldKeymap,
       ...completionKeymap,
     ]),
-    // StreamLanguage.define(lua),
-    javascript(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     cobalt,
   ];
+
+  if (options.js) {
+    extensions.push(javascript());
+    extensions.push(lineNumbers());
+  }
+
+  if (options.lua) {
+    extensions.push(StreamLanguage.define(lua));
+    extensions.push(lineNumbers());
+  }
+
+  if (options.tcl) {
+    extensions.push(StreamLanguage.define(tcl));
+    extensions.push(lineNumbers());
+  }
 
   return EditorState.create({
     doc: initialContents,

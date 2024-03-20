@@ -138,20 +138,20 @@ local function send_file_content(msg, ftid)
 
     local env,conn = su.open"file"
     local function execute(cur) -- su.select() callback function
-        local key, content = cur:fetch()
+        local key, content, fileName = cur:fetch()
         
         while key do
             if key == msg.key then 
-                local script = {key= key, code= content}
+                local script = {key= key, code= content, fileName = fileName}
                 
                 smq:publish(ba.json.encode(script), "file_content_response")
                 break 
             end
             
-            key,content = cur:fetch()
+            key,content,fileName = cur:fetch()
         end
     end
-    su.select(conn,"key,content FROM scripts",execute)
+    su.select(conn,"key,content,fileName FROM scripts",execute)
     su.close(env,conn)
 end
 

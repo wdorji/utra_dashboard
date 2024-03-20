@@ -16228,7 +16228,7 @@ var cm6 = (function (exports) {
        return rule || null;
    }
    const t = Tag.define;
-   const comment = t(), name = t(), typeName = t(name), propertyName = t(name), literal = t(), string = t(literal), number = t(literal), content = t(), heading = t(content), keyword = t(), operator = t(), punctuation = t(), bracket = t(punctuation), meta = t();
+   const comment = t(), name = t(), typeName = t(name), propertyName = t(name), literal = t(), string$1 = t(literal), number = t(literal), content = t(), heading = t(content), keyword = t(), operator = t(), punctuation = t(), bracket = t(punctuation), meta = t();
    /**
    The default set of highlighting [tags](#highlight.Tag).
 
@@ -16313,19 +16313,19 @@ var cm6 = (function (exports) {
        /**
        A string [literal](#highlight.tags.literal).
        */
-       string,
+       string: string$1,
        /**
        A documentation [string](#highlight.tags.string).
        */
-       docString: t(string),
+       docString: t(string$1),
        /**
        A character literal (subtag of [string](#highlight.tags.string)).
        */
-       character: t(string),
+       character: t(string$1),
        /**
        An attribute value (subtag of [string](#highlight.tags.string)).
        */
-       attributeValue: t(string),
+       attributeValue: t(string$1),
        /**
        A number [literal](#highlight.tags.literal).
        */
@@ -18442,8 +18442,473 @@ var cm6 = (function (exports) {
        }
        return iter.done ? { start: startToken, matched: false } : null;
    }
+
+   // Counts the column offset in a string, taking tabs into account.
+   // Used mostly to find indentation.
+   function countCol(string, end, tabSize, startIndex = 0, startValue = 0) {
+       if (end == null) {
+           end = string.search(/[^\s\u00a0]/);
+           if (end == -1)
+               end = string.length;
+       }
+       let n = startValue;
+       for (let i = startIndex; i < end; i++) {
+           if (string.charCodeAt(i) == 9)
+               n += tabSize - (n % tabSize);
+           else
+               n++;
+       }
+       return n;
+   }
+   /**
+   Encapsulates a single line of input. Given to stream syntax code,
+   which uses it to tokenize the content.
+   */
+   class StringStream {
+       /**
+       Create a stream.
+       */
+       constructor(
+       /**
+       The line.
+       */
+       string, tabSize, 
+       /**
+       The current indent unit size.
+       */
+       indentUnit, overrideIndent) {
+           this.string = string;
+           this.tabSize = tabSize;
+           this.indentUnit = indentUnit;
+           this.overrideIndent = overrideIndent;
+           /**
+           The current position on the line.
+           */
+           this.pos = 0;
+           /**
+           The start position of the current token.
+           */
+           this.start = 0;
+           this.lastColumnPos = 0;
+           this.lastColumnValue = 0;
+       }
+       /**
+       True if we are at the end of the line.
+       */
+       eol() { return this.pos >= this.string.length; }
+       /**
+       True if we are at the start of the line.
+       */
+       sol() { return this.pos == 0; }
+       /**
+       Get the next code unit after the current position, or undefined
+       if we're at the end of the line.
+       */
+       peek() { return this.string.charAt(this.pos) || undefined; }
+       /**
+       Read the next code unit and advance `this.pos`.
+       */
+       next() {
+           if (this.pos < this.string.length)
+               return this.string.charAt(this.pos++);
+       }
+       /**
+       Match the next character against the given string, regular
+       expression, or predicate. Consume and return it if it matches.
+       */
+       eat(match) {
+           let ch = this.string.charAt(this.pos);
+           let ok;
+           if (typeof match == "string")
+               ok = ch == match;
+           else
+               ok = ch && (match instanceof RegExp ? match.test(ch) : match(ch));
+           if (ok) {
+               ++this.pos;
+               return ch;
+           }
+       }
+       /**
+       Continue matching characters that match the given string,
+       regular expression, or predicate function. Return true if any
+       characters were consumed.
+       */
+       eatWhile(match) {
+           let start = this.pos;
+           while (this.eat(match)) { }
+           return this.pos > start;
+       }
+       /**
+       Consume whitespace ahead of `this.pos`. Return true if any was
+       found.
+       */
+       eatSpace() {
+           let start = this.pos;
+           while (/[\s\u00a0]/.test(this.string.charAt(this.pos)))
+               ++this.pos;
+           return this.pos > start;
+       }
+       /**
+       Move to the end of the line.
+       */
+       skipToEnd() { this.pos = this.string.length; }
+       /**
+       Move to directly before the given character, if found on the
+       current line.
+       */
+       skipTo(ch) {
+           let found = this.string.indexOf(ch, this.pos);
+           if (found > -1) {
+               this.pos = found;
+               return true;
+           }
+       }
+       /**
+       Move back `n` characters.
+       */
+       backUp(n) { this.pos -= n; }
+       /**
+       Get the column position at `this.pos`.
+       */
+       column() {
+           if (this.lastColumnPos < this.start) {
+               this.lastColumnValue = countCol(this.string, this.start, this.tabSize, this.lastColumnPos, this.lastColumnValue);
+               this.lastColumnPos = this.start;
+           }
+           return this.lastColumnValue;
+       }
+       /**
+       Get the indentation column of the current line.
+       */
+       indentation() {
+           var _a;
+           return (_a = this.overrideIndent) !== null && _a !== void 0 ? _a : countCol(this.string, null, this.tabSize);
+       }
+       /**
+       Match the input against the given string or regular expression
+       (which should start with a `^`). Return true or the regexp match
+       if it matches.
+       
+       Unless `consume` is set to `false`, this will move `this.pos`
+       past the matched text.
+       
+       When matching a string `caseInsensitive` can be set to true to
+       make the match case-insensitive.
+       */
+       match(pattern, consume, caseInsensitive) {
+           if (typeof pattern == "string") {
+               let cased = (str) => caseInsensitive ? str.toLowerCase() : str;
+               let substr = this.string.substr(this.pos, pattern.length);
+               if (cased(substr) == cased(pattern)) {
+                   if (consume !== false)
+                       this.pos += pattern.length;
+                   return true;
+               }
+               else
+                   return null;
+           }
+           else {
+               let match = this.string.slice(this.pos).match(pattern);
+               if (match && match.index > 0)
+                   return null;
+               if (match && consume !== false)
+                   this.pos += match[0].length;
+               return match;
+           }
+       }
+       /**
+       Get the current token.
+       */
+       current() { return this.string.slice(this.start, this.pos); }
+   }
+
+   function fullParser(spec) {
+       return {
+           name: spec.name || "",
+           token: spec.token,
+           blankLine: spec.blankLine || (() => { }),
+           startState: spec.startState || (() => true),
+           copyState: spec.copyState || defaultCopyState,
+           indent: spec.indent || (() => null),
+           languageData: spec.languageData || {},
+           tokenTable: spec.tokenTable || noTokens
+       };
+   }
+   function defaultCopyState(state) {
+       if (typeof state != "object")
+           return state;
+       let newState = {};
+       for (let prop in state) {
+           let val = state[prop];
+           newState[prop] = (val instanceof Array ? val.slice() : val);
+       }
+       return newState;
+   }
+   const IndentedFrom = /*@__PURE__*/new WeakMap();
+   /**
+   A [language](https://codemirror.net/6/docs/ref/#language.Language) class based on a CodeMirror
+   5-style [streaming parser](https://codemirror.net/6/docs/ref/#language.StreamParser).
+   */
+   class StreamLanguage extends Language {
+       constructor(parser) {
+           let data = defineLanguageFacet(parser.languageData);
+           let p = fullParser(parser), self;
+           let impl = new class extends Parser {
+               createParse(input, fragments, ranges) {
+                   return new Parse$1(self, input, fragments, ranges);
+               }
+           };
+           super(data, impl, [indentService.of((cx, pos) => this.getIndent(cx, pos))], parser.name);
+           this.topNode = docID(data);
+           self = this;
+           this.streamParser = p;
+           this.stateAfter = new NodeProp({ perNode: true });
+           this.tokenTable = parser.tokenTable ? new TokenTable(p.tokenTable) : defaultTokenTable;
+       }
+       /**
+       Define a stream language.
+       */
+       static define(spec) { return new StreamLanguage(spec); }
+       getIndent(cx, pos) {
+           let tree = syntaxTree(cx.state), at = tree.resolve(pos);
+           while (at && at.type != this.topNode)
+               at = at.parent;
+           if (!at)
+               return null;
+           let from = undefined;
+           let { overrideIndentation } = cx.options;
+           if (overrideIndentation) {
+               from = IndentedFrom.get(cx.state);
+               if (from != null && from < pos - 1e4)
+                   from = undefined;
+           }
+           let start = findState(this, tree, 0, at.from, from !== null && from !== void 0 ? from : pos), statePos, state;
+           if (start) {
+               state = start.state;
+               statePos = start.pos + 1;
+           }
+           else {
+               state = this.streamParser.startState(cx.unit);
+               statePos = 0;
+           }
+           if (pos - statePos > 10000 /* C.MaxIndentScanDist */)
+               return null;
+           while (statePos < pos) {
+               let line = cx.state.doc.lineAt(statePos), end = Math.min(pos, line.to);
+               if (line.length) {
+                   let indentation = overrideIndentation ? overrideIndentation(line.from) : -1;
+                   let stream = new StringStream(line.text, cx.state.tabSize, cx.unit, indentation < 0 ? undefined : indentation);
+                   while (stream.pos < end - line.from)
+                       readToken$1(this.streamParser.token, stream, state);
+               }
+               else {
+                   this.streamParser.blankLine(state, cx.unit);
+               }
+               if (end == pos)
+                   break;
+               statePos = line.to + 1;
+           }
+           let line = cx.lineAt(pos);
+           if (overrideIndentation && from == null)
+               IndentedFrom.set(cx.state, line.from);
+           return this.streamParser.indent(state, /^\s*(.*)/.exec(line.text)[1], cx);
+       }
+       get allowsNesting() { return false; }
+   }
+   function findState(lang, tree, off, startPos, before) {
+       let state = off >= startPos && off + tree.length <= before && tree.prop(lang.stateAfter);
+       if (state)
+           return { state: lang.streamParser.copyState(state), pos: off + tree.length };
+       for (let i = tree.children.length - 1; i >= 0; i--) {
+           let child = tree.children[i], pos = off + tree.positions[i];
+           let found = child instanceof Tree && pos < before && findState(lang, child, pos, startPos, before);
+           if (found)
+               return found;
+       }
+       return null;
+   }
+   function cutTree(lang, tree, from, to, inside) {
+       if (inside && from <= 0 && to >= tree.length)
+           return tree;
+       if (!inside && tree.type == lang.topNode)
+           inside = true;
+       for (let i = tree.children.length - 1; i >= 0; i--) {
+           let pos = tree.positions[i], child = tree.children[i], inner;
+           if (pos < to && child instanceof Tree) {
+               if (!(inner = cutTree(lang, child, from - pos, to - pos, inside)))
+                   break;
+               return !inside ? inner
+                   : new Tree(tree.type, tree.children.slice(0, i).concat(inner), tree.positions.slice(0, i + 1), pos + inner.length);
+           }
+       }
+       return null;
+   }
+   function findStartInFragments(lang, fragments, startPos, editorState) {
+       for (let f of fragments) {
+           let from = f.from + (f.openStart ? 25 : 0), to = f.to - (f.openEnd ? 25 : 0);
+           let found = from <= startPos && to > startPos && findState(lang, f.tree, 0 - f.offset, startPos, to), tree;
+           if (found && (tree = cutTree(lang, f.tree, startPos + f.offset, found.pos + f.offset, false)))
+               return { state: found.state, tree };
+       }
+       return { state: lang.streamParser.startState(editorState ? getIndentUnit(editorState) : 4), tree: Tree.empty };
+   }
+   let Parse$1 = class Parse {
+       constructor(lang, input, fragments, ranges) {
+           this.lang = lang;
+           this.input = input;
+           this.fragments = fragments;
+           this.ranges = ranges;
+           this.stoppedAt = null;
+           this.chunks = [];
+           this.chunkPos = [];
+           this.chunk = [];
+           this.chunkReused = undefined;
+           this.rangeIndex = 0;
+           this.to = ranges[ranges.length - 1].to;
+           let context = ParseContext.get(), from = ranges[0].from;
+           let { state, tree } = findStartInFragments(lang, fragments, from, context === null || context === void 0 ? void 0 : context.state);
+           this.state = state;
+           this.parsedPos = this.chunkStart = from + tree.length;
+           for (let i = 0; i < tree.children.length; i++) {
+               this.chunks.push(tree.children[i]);
+               this.chunkPos.push(tree.positions[i]);
+           }
+           if (context && this.parsedPos < context.viewport.from - 100000 /* C.MaxDistanceBeforeViewport */) {
+               this.state = this.lang.streamParser.startState(getIndentUnit(context.state));
+               context.skipUntilInView(this.parsedPos, context.viewport.from);
+               this.parsedPos = context.viewport.from;
+           }
+           this.moveRangeIndex();
+       }
+       advance() {
+           let context = ParseContext.get();
+           let parseEnd = this.stoppedAt == null ? this.to : Math.min(this.to, this.stoppedAt);
+           let end = Math.min(parseEnd, this.chunkStart + 2048 /* C.ChunkSize */);
+           if (context)
+               end = Math.min(end, context.viewport.to);
+           while (this.parsedPos < end)
+               this.parseLine(context);
+           if (this.chunkStart < this.parsedPos)
+               this.finishChunk();
+           if (this.parsedPos >= parseEnd)
+               return this.finish();
+           if (context && this.parsedPos >= context.viewport.to) {
+               context.skipUntilInView(this.parsedPos, parseEnd);
+               return this.finish();
+           }
+           return null;
+       }
+       stopAt(pos) {
+           this.stoppedAt = pos;
+       }
+       lineAfter(pos) {
+           let chunk = this.input.chunk(pos);
+           if (!this.input.lineChunks) {
+               let eol = chunk.indexOf("\n");
+               if (eol > -1)
+                   chunk = chunk.slice(0, eol);
+           }
+           else if (chunk == "\n") {
+               chunk = "";
+           }
+           return pos + chunk.length <= this.to ? chunk : chunk.slice(0, this.to - pos);
+       }
+       nextLine() {
+           let from = this.parsedPos, line = this.lineAfter(from), end = from + line.length;
+           for (let index = this.rangeIndex;;) {
+               let rangeEnd = this.ranges[index].to;
+               if (rangeEnd >= end)
+                   break;
+               line = line.slice(0, rangeEnd - (end - line.length));
+               index++;
+               if (index == this.ranges.length)
+                   break;
+               let rangeStart = this.ranges[index].from;
+               let after = this.lineAfter(rangeStart);
+               line += after;
+               end = rangeStart + after.length;
+           }
+           return { line, end };
+       }
+       skipGapsTo(pos, offset, side) {
+           for (;;) {
+               let end = this.ranges[this.rangeIndex].to, offPos = pos + offset;
+               if (side > 0 ? end > offPos : end >= offPos)
+                   break;
+               let start = this.ranges[++this.rangeIndex].from;
+               offset += start - end;
+           }
+           return offset;
+       }
+       moveRangeIndex() {
+           while (this.ranges[this.rangeIndex].to < this.parsedPos)
+               this.rangeIndex++;
+       }
+       emitToken(id, from, to, size, offset) {
+           if (this.ranges.length > 1) {
+               offset = this.skipGapsTo(from, offset, 1);
+               from += offset;
+               let len0 = this.chunk.length;
+               offset = this.skipGapsTo(to, offset, -1);
+               to += offset;
+               size += this.chunk.length - len0;
+           }
+           this.chunk.push(id, from, to, size);
+           return offset;
+       }
+       parseLine(context) {
+           let { line, end } = this.nextLine(), offset = 0, { streamParser } = this.lang;
+           let stream = new StringStream(line, context ? context.state.tabSize : 4, context ? getIndentUnit(context.state) : 2);
+           if (stream.eol()) {
+               streamParser.blankLine(this.state, stream.indentUnit);
+           }
+           else {
+               while (!stream.eol()) {
+                   let token = readToken$1(streamParser.token, stream, this.state);
+                   if (token)
+                       offset = this.emitToken(this.lang.tokenTable.resolve(token), this.parsedPos + stream.start, this.parsedPos + stream.pos, 4, offset);
+                   if (stream.start > 10000 /* C.MaxLineLength */)
+                       break;
+               }
+           }
+           this.parsedPos = end;
+           this.moveRangeIndex();
+           if (this.parsedPos < this.to)
+               this.parsedPos++;
+       }
+       finishChunk() {
+           let tree = Tree.build({
+               buffer: this.chunk,
+               start: this.chunkStart,
+               length: this.parsedPos - this.chunkStart,
+               nodeSet,
+               topID: 0,
+               maxBufferLength: 2048 /* C.ChunkSize */,
+               reused: this.chunkReused
+           });
+           tree = new Tree(tree.type, tree.children, tree.positions, tree.length, [[this.lang.stateAfter, this.lang.streamParser.copyState(this.state)]]);
+           this.chunks.push(tree);
+           this.chunkPos.push(this.chunkStart - this.ranges[0].from);
+           this.chunk = [];
+           this.chunkReused = undefined;
+           this.chunkStart = this.parsedPos;
+       }
+       finish() {
+           return new Tree(this.lang.topNode, this.chunks, this.chunkPos, this.parsedPos - this.ranges[0].from).balance();
+       }
+   };
+   function readToken$1(token, stream, state) {
+       stream.start = stream.pos;
+       for (let i = 0; i < 10; i++) {
+           let result = token(stream, state);
+           if (stream.pos > stream.start)
+               return result;
+       }
+       throw new Error("Stream parser failed to advance stream.");
+   }
    const noTokens = /*@__PURE__*/Object.create(null);
    const typeArray = [NodeType.none];
+   const nodeSet = /*@__PURE__*/new NodeSet(typeArray);
    const warned = [];
    // Cache of node types by name and tags
    const byTag = /*@__PURE__*/Object.create(null);
@@ -18463,6 +18928,16 @@ var cm6 = (function (exports) {
        ["property", "propertyName"]
    ])
        defaultTable[legacyName] = /*@__PURE__*/createTokenType(noTokens, name);
+   class TokenTable {
+       constructor(extra) {
+           this.extra = extra;
+           this.table = Object.assign(Object.create(null), defaultTable);
+       }
+       resolve(tag) {
+           return !tag ? 0 : this.table[tag] || (this.table[tag] = createTokenType(this.extra, tag));
+       }
+   }
+   const defaultTokenTable = /*@__PURE__*/new TokenTable(noTokens);
    function warnForPart(part, msg) {
        if (warned.indexOf(part) > -1)
            return;
@@ -18507,6 +18982,11 @@ var cm6 = (function (exports) {
        });
        typeArray.push(type);
        return type.id;
+   }
+   function docID(data) {
+       let type = NodeType.define({ id: typeArray.length, name: "Document", props: [languageDataProp.add(() => data)], top: true });
+       typeArray.push(type);
+       return type;
    }
    ({
        rtl: /*@__PURE__*/Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "rtl" }, bidiIsolate: Direction.RTL }),
@@ -22999,6 +23479,142 @@ var cm6 = (function (exports) {
    ];
    const completionKeymapExt = /*@__PURE__*/Prec.highest(/*@__PURE__*/keymap.computeN([completionConfig], state => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
+   function prefixRE(words) {
+     return new RegExp("^(?:" + words.join("|") + ")", "i");
+   }
+   function wordRE(words) {
+     return new RegExp("^(?:" + words.join("|") + ")$", "i");
+   }
+
+   // long list of standard functions from lua manual
+   var builtins = wordRE([
+     "_G","_VERSION","assert","collectgarbage","dofile","error","getfenv","getmetatable","ipairs","load",
+     "loadfile","loadstring","module","next","pairs","pcall","print","rawequal","rawget","rawset","require",
+     "select","setfenv","setmetatable","tonumber","tostring","type","unpack","xpcall",
+
+     "coroutine.create","coroutine.resume","coroutine.running","coroutine.status","coroutine.wrap","coroutine.yield",
+
+     "debug.debug","debug.getfenv","debug.gethook","debug.getinfo","debug.getlocal","debug.getmetatable",
+     "debug.getregistry","debug.getupvalue","debug.setfenv","debug.sethook","debug.setlocal","debug.setmetatable",
+     "debug.setupvalue","debug.traceback",
+
+     "close","flush","lines","read","seek","setvbuf","write",
+
+     "io.close","io.flush","io.input","io.lines","io.open","io.output","io.popen","io.read","io.stderr","io.stdin",
+     "io.stdout","io.tmpfile","io.type","io.write",
+
+     "math.abs","math.acos","math.asin","math.atan","math.atan2","math.ceil","math.cos","math.cosh","math.deg",
+     "math.exp","math.floor","math.fmod","math.frexp","math.huge","math.ldexp","math.log","math.log10","math.max",
+     "math.min","math.modf","math.pi","math.pow","math.rad","math.random","math.randomseed","math.sin","math.sinh",
+     "math.sqrt","math.tan","math.tanh",
+
+     "os.clock","os.date","os.difftime","os.execute","os.exit","os.getenv","os.remove","os.rename","os.setlocale",
+     "os.time","os.tmpname",
+
+     "package.cpath","package.loaded","package.loaders","package.loadlib","package.path","package.preload",
+     "package.seeall",
+
+     "string.byte","string.char","string.dump","string.find","string.format","string.gmatch","string.gsub",
+     "string.len","string.lower","string.match","string.rep","string.reverse","string.sub","string.upper",
+
+     "table.concat","table.insert","table.maxn","table.remove","table.sort"
+   ]);
+   var keywords$2 = wordRE(["and","break","elseif","false","nil","not","or","return",
+                          "true","function", "end", "if", "then", "else", "do",
+                          "while", "repeat", "until", "for", "in", "local" ]);
+
+   var indentTokens = wordRE(["function", "if","repeat","do", "\\(", "{"]);
+   var dedentTokens = wordRE(["end", "until", "\\)", "}"]);
+   var dedentPartial = prefixRE(["end", "until", "\\)", "}", "else", "elseif"]);
+
+   function readBracket(stream) {
+     var level = 0;
+     while (stream.eat("=")) ++level;
+     stream.eat("[");
+     return level;
+   }
+
+   function normal(stream, state) {
+     var ch = stream.next();
+     if (ch == "-" && stream.eat("-")) {
+       if (stream.eat("[") && stream.eat("["))
+         return (state.cur = bracketed(readBracket(stream), "comment"))(stream, state);
+       stream.skipToEnd();
+       return "comment";
+     }
+     if (ch == "\"" || ch == "'")
+       return (state.cur = string(ch))(stream, state);
+     if (ch == "[" && /[\[=]/.test(stream.peek()))
+       return (state.cur = bracketed(readBracket(stream), "string"))(stream, state);
+     if (/\d/.test(ch)) {
+       stream.eatWhile(/[\w.%]/);
+       return "number";
+     }
+     if (/[\w_]/.test(ch)) {
+       stream.eatWhile(/[\w\\\-_.]/);
+       return "variable";
+     }
+     return null;
+   }
+
+   function bracketed(level, style) {
+     return function(stream, state) {
+       var curlev = null, ch;
+       while ((ch = stream.next()) != null) {
+         if (curlev == null) {if (ch == "]") curlev = 0;}
+         else if (ch == "=") ++curlev;
+         else if (ch == "]" && curlev == level) { state.cur = normal; break; }
+         else curlev = null;
+       }
+       return style;
+     };
+   }
+
+   function string(quote) {
+     return function(stream, state) {
+       var escaped = false, ch;
+       while ((ch = stream.next()) != null) {
+         if (ch == quote && !escaped) break;
+         escaped = !escaped && ch == "\\";
+       }
+       if (!escaped) state.cur = normal;
+       return "string";
+     };
+   }
+
+   const lua = {
+     name: "lua",
+
+     startState: function() {
+       return {basecol: 0, indentDepth: 0, cur: normal};
+     },
+
+     token: function(stream, state) {
+       if (stream.eatSpace()) return null;
+       var style = state.cur(stream, state);
+       var word = stream.current();
+       if (style == "variable") {
+         if (keywords$2.test(word)) style = "keyword";
+         else if (builtins.test(word)) style = "builtin";
+       }
+       if ((style != "comment") && (style != "string")){
+         if (indentTokens.test(word)) ++state.indentDepth;
+         else if (dedentTokens.test(word)) --state.indentDepth;
+       }
+       return style;
+     },
+
+     indent: function(state, textAfter, cx) {
+       var closing = dedentPartial.test(textAfter);
+       return state.basecol + cx.unit * (state.indentDepth - (closing ? 1 : 0));
+     },
+
+     languageData: {
+       indentOnInput: /^\s*(?:end|until|else|\)|\})$/,
+       commentTokens: {line: "--", block: {open: "--[[", close: "]]--"}}
+     }
+   };
+
    /**
    A parse stack. These are used internally by the parser to track
    parsing progress. They also provide some properties and methods
@@ -25283,8 +25899,8 @@ var cm6 = (function (exports) {
        props: [/*@__PURE__*/sublanguageProp.add(n => n.isTop ? [jsxSublanguage] : undefined)]
    }, "typescript");
    let kwCompletion = (name) => ({ label: name, type: "keyword" });
-   const keywords = /*@__PURE__*/"break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion);
-   const typescriptKeywords = /*@__PURE__*/keywords.concat(/*@__PURE__*/["declare", "implements", "private", "protected", "public"].map(kwCompletion));
+   const keywords$1 = /*@__PURE__*/"break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion);
+   const typescriptKeywords = /*@__PURE__*/keywords$1.concat(/*@__PURE__*/["declare", "implements", "private", "protected", "public"].map(kwCompletion));
    /**
    JavaScript support. Includes [snippet](https://codemirror.net/6/docs/ref/#lang-javascript.snippets)
    and local variable completion.
@@ -25292,7 +25908,7 @@ var cm6 = (function (exports) {
    function javascript(config = {}) {
        let lang = config.jsx ? (config.typescript ? tsxLanguage : jsxLanguage)
            : config.typescript ? typescriptLanguage : javascriptLanguage;
-       let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords);
+       let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords$1);
        return new LanguageSupport(lang, [
            javascriptLanguage.data.of({
                autocomplete: ifNotIn(dontComplete, completeFromList(completions))
@@ -25366,9 +25982,132 @@ var cm6 = (function (exports) {
        return true;
    });
 
+   function parseWords(str) {
+     var obj = {}, words = str.split(" ");
+     for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+     return obj;
+   }
+   var keywords = parseWords("Tcl safe after append array auto_execok auto_import auto_load " +
+                             "auto_mkindex auto_mkindex_old auto_qualify auto_reset bgerror " +
+                             "binary break catch cd close concat continue dde eof encoding error " +
+                             "eval exec exit expr fblocked fconfigure fcopy file fileevent filename " +
+                             "filename flush for foreach format gets glob global history http if " +
+                             "incr info interp join lappend lindex linsert list llength load lrange " +
+                             "lreplace lsearch lset lsort memory msgcat namespace open package parray " +
+                             "pid pkg::create pkg_mkIndex proc puts pwd re_syntax read regex regexp " +
+                             "registry regsub rename resource return scan seek set socket source split " +
+                             "string subst switch tcl_endOfWord tcl_findLibrary tcl_startOfNextWord " +
+                             "tcl_wordBreakAfter tcl_startOfPreviousWord tcl_wordBreakBefore tcltest " +
+                             "tclvars tell time trace unknown unset update uplevel upvar variable " +
+                             "vwait");
+   var functions = parseWords("if elseif else and not or eq ne in ni for foreach while switch");
+   var isOperatorChar = /[+\-*&%=<>!?^\/\|]/;
+   function chain(stream, state, f) {
+     state.tokenize = f;
+     return f(stream, state);
+   }
+   function tokenBase(stream, state) {
+     var beforeParams = state.beforeParams;
+     state.beforeParams = false;
+     var ch = stream.next();
+     if ((ch == '"' || ch == "'") && state.inParams) {
+       return chain(stream, state, tokenString(ch));
+     } else if (/[\[\]{}\(\),;\.]/.test(ch)) {
+       if (ch == "(" && beforeParams) state.inParams = true;
+       else if (ch == ")") state.inParams = false;
+       return null;
+     } else if (/\d/.test(ch)) {
+       stream.eatWhile(/[\w\.]/);
+       return "number";
+     } else if (ch == "#") {
+       if (stream.eat("*"))
+         return chain(stream, state, tokenComment);
+       if (ch == "#" && stream.match(/ *\[ *\[/))
+         return chain(stream, state, tokenUnparsed);
+       stream.skipToEnd();
+       return "comment";
+     } else if (ch == '"') {
+       stream.skipTo(/"/);
+       return "comment";
+     } else if (ch == "$") {
+       stream.eatWhile(/[$_a-z0-9A-Z\.{:]/);
+       stream.eatWhile(/}/);
+       state.beforeParams = true;
+       return "builtin";
+     } else if (isOperatorChar.test(ch)) {
+       stream.eatWhile(isOperatorChar);
+       return "comment";
+     } else {
+       stream.eatWhile(/[\w\$_{}\xa1-\uffff]/);
+       var word = stream.current().toLowerCase();
+       if (keywords && keywords.propertyIsEnumerable(word))
+         return "keyword";
+       if (functions && functions.propertyIsEnumerable(word)) {
+         state.beforeParams = true;
+         return "keyword";
+       }
+       return null;
+     }
+   }
+   function tokenString(quote) {
+     return function(stream, state) {
+       var escaped = false, next, end = false;
+       while ((next = stream.next()) != null) {
+         if (next == quote && !escaped) {
+           end = true;
+           break;
+         }
+         escaped = !escaped && next == "\\";
+       }
+       if (end) state.tokenize = tokenBase;
+       return "string";
+     };
+   }
+   function tokenComment(stream, state) {
+     var maybeEnd = false, ch;
+     while (ch = stream.next()) {
+       if (ch == "#" && maybeEnd) {
+         state.tokenize = tokenBase;
+         break;
+       }
+       maybeEnd = (ch == "*");
+     }
+     return "comment";
+   }
+   function tokenUnparsed(stream, state) {
+     var maybeEnd = 0, ch;
+     while (ch = stream.next()) {
+       if (ch == "#" && maybeEnd == 2) {
+         state.tokenize = tokenBase;
+         break;
+       }
+       if (ch == "]")
+         maybeEnd++;
+       else if (ch != " ")
+         maybeEnd = 0;
+     }
+     return "meta";
+   }
+   const tcl = {
+     name: "tcl",
+     startState: function() {
+       return {
+         tokenize: tokenBase,
+         beforeParams: false,
+         inParams: false
+       };
+     },
+     token: function(stream, state) {
+       if (stream.eatSpace()) return null;
+       return state.tokenize(stream, state);
+     },
+     languageData: {
+       commentTokens: {line: "#"}
+     }
+   };
+
    function createEditorState(initialContents, options = {}) {
      let extensions = [
-       lineNumbers(),
        highlightActiveLineGutter(),
        highlightSpecialChars(),
        history(),
@@ -25392,11 +26131,24 @@ var cm6 = (function (exports) {
          ...foldKeymap,
          ...completionKeymap,
        ]),
-       // StreamLanguage.define(lua),
-       javascript(),
        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
        cobalt,
      ];
+
+     if (options.js) {
+       extensions.push(javascript());
+       extensions.push(lineNumbers());
+     }
+
+     if (options.lua) {
+       extensions.push(StreamLanguage.define(lua));
+       extensions.push(lineNumbers());
+     }
+
+     if (options.tcl) {
+       extensions.push(StreamLanguage.define(tcl));
+       extensions.push(lineNumbers());
+     }
 
      return EditorState.create({
        doc: initialContents,
