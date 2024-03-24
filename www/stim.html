@@ -38,6 +38,11 @@
     <script src="/rtl/jquery.js"></script>
     <script src="/rtl/smq.js"></script>
     <script>
+      const split = window.location.href.split("/");
+      const currentUrl = split[split.length - 1];
+      
+      
+
       $(function () {
 
         let states = new Map(); //map to hold editor states for each file
@@ -425,6 +430,34 @@
         $("#save").click(saveCurrentContent);
 
         $('#run').click(runScript)
+
+        function onNavNames(msg, ftid) {
+          const navList = document.getElementsByClassName("nav__list")[0];
+          for (let i = 0; i < msg.length; i++) {
+            const navItem = document.createElement("li");
+            navItem.className = "nav__item";
+            const aElement = document.createElement("a");
+            aElement.className = "nav__link";
+            if (msg[i].href === currentUrl) {
+              aElement.className = "active";
+            }
+
+            aElement.textContent = msg[i].name;
+
+            aElement.href = msg[i].href;
+
+            navItem.append(aElement);
+            navList.append(navItem);
+          }
+    
+        }
+
+        smq.subscribe("nav_items_response", {
+          onmsg: onNavNames,
+          datatype: "json",
+        });
+
+        smq.publish("signal", "nav_names_request");
       });
     </script>
   </head>
@@ -435,15 +468,6 @@
 
         <nav class="nav">
           <ul class="nav__list">
-            <li class="nav__item">
-              <a class="nav__link" href=".">Tables</a>
-            </li>
-            <li class="nav__item">
-              <a class="active" href="stim.html">STIM</a>
-            </li>
-            <li class="nav__item">
-              <a class="nav__link" href="chat.html">Chat</a>
-            </li>
           </ul>
         </nav>
       </div>

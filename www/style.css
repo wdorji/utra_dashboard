@@ -391,3 +391,149 @@ input[type="submit"] {
   border: 1px solid #ccc;
   background-color: #f1f1f1;
 }
+
+.controlWrapper {
+  margin: 3%;
+}
+
+.controlGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  grid-auto-rows: minmax(100px, auto);
+}
+
+.categoryWrapper {
+  background-color: gainsboro;
+  border-radius: 0.6rem;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 10;
+  grid-auto-rows: 30px;
+  grid-auto-columns: 30px;
+  background-color: gainsboro;
+  border-radius: 0.6rem;
+}
+
+.uncategorisedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 10;
+  grid-auto-rows: 30px;
+  grid-auto-columns: 30px;
+  border-radius: 0.6rem;
+}
+
+.widgetContainer {
+  padding: 5;
+  font-size: small;
+  display: flex;
+}
+
+.widgetContainer:hover {
+  border: 1px solid #0071e3;
+}
+
+.sliderContainer {
+  padding: 5;
+  margin: 10;
+  font-size: small;
+  display: flex;
+  flex-direction: column;
+}
+
+.sliderContainer:hover {
+  border: 1px solid #0071e3;
+}
+
+.widgetContainer select {
+  margin-left: 10;
+  width: 70;
+  height: 20;
+}
+
+.widgetContainer input {
+  margin-left: 10;
+  width: 70;
+  height: 20;
+}
+
+.sliderContainer input {
+  margin-left: 10;
+  width: 200;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: var(--col);
+  grid-template-rows: var(--row);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  margin: 20px 0;
+  width: 100%;
+}
+input[type="range"]:focus {
+  outline: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  animate: 0.2s;
+  background: #03a9f4;
+  border-radius: 25px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px 0 rgba(0, 0, 0, 1);
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -8px;
+}
+input[type="range"]:focus::-webkit-slider-runnable-track {
+  background: #03a9f4;
+}
+
+.range-wrap {
+  width: 100%;
+  position: relative;
+}
+.range-value {
+  position: absolute;
+  top: -50%;
+}
+.range-value span {
+  width: 30px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background: #03a9f4;
+  color: #fff;
+  font-size: 12px;
+  display: block;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 0);
+  border-radius: 6px;
+}
+.range-value span:before {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 10px solid #03a9f4;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  margin-top: -1px;
+}

@@ -1,0 +1,176 @@
+<html>
+  <!-- <style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    td,
+    th {
+      border: 1px solid #000000;
+      text-align: left;
+      padding: 8px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+  </style> -->
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+
+    <title>Tables</title>
+    <script src="/rtl/jquery.js"></script>
+    <script src="/rtl/smq.js"></script>
+    <script>
+      const split = window.location.href.split("/");
+      const currentUrl = split[split.length - 1];
+
+      $(function () {
+        var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
+        // var smq = SMQ.Client("wss://simplemq.com/smq.lsp");
+
+        function insertRow(time, state, elapsed) {
+          var table = document.getElementById("myTable");
+          var row = table.insertRow(table.rows.length);
+          var cell1 = row.insertCell(0);
+          var cell2 = row.insertCell(1);
+          var cell3 = row.insertCell(2);
+          cell1.innerHTML = time;
+          cell2.innerHTML = state;
+          cell3.innerHTML = elapsed;
+        }
+
+        function onValueUpdate(msg, ftid) {
+          console.log("received: ", msg);
+          insertRow(msg.time, msg.state, msg.elapsed);
+        }
+
+        smq.subscribe("tableView", { onmsg: onValueUpdate, datatype: "json" });
+
+        function onNavNames(msg, ftid) {
+          const navList = document.getElementsByClassName("nav__list")[0];
+          for (let i = 0; i < msg.length; i++) {
+            const navItem = document.createElement("li");
+            navItem.className = "nav__item";
+            const aElement = document.createElement("a");
+            aElement.className = "nav__link";
+            if (msg[i].href === currentUrl) {
+              aElement.className = "active";
+            }
+
+            aElement.textContent = msg[i].name;
+
+            aElement.href = msg[i].href;
+
+            navItem.append(aElement);
+            navList.append(navItem);
+          }
+        }
+
+        smq.subscribe("nav_items_response", {
+          onmsg: onNavNames,
+          datatype: "json",
+        });
+
+        smq.publish("signal", "nav_names_request");
+      });
+    </script>
+  </head>
+
+  <body>
+    <header class="header">
+      <div class="header__content">
+        <!-- <a class="logo"> </a> -->
+
+        <nav class="nav">
+          <ul class="nav__list"></ul>
+        </nav>
+      </div>
+    </header>
+    <h1 style="margin: 3%">Control Viewer</h1>
+    <div class="controlWrapper">
+      <div class="controlGrid">
+        <div class="categoryWrapper">
+          <div class="sliderContainer">
+            <label for="system">Slider1:</label>
+            <br />
+            <div class="range-wrap">
+              <div class="range-value" id="rangeV"></div>
+              <input
+                id="range"
+                type="range"
+                min="200"
+                max="800"
+                value="200"
+                step="1"
+              />
+            </div>
+
+            <div
+              style="display: flex; justify-content: space-between; width: 100%"
+            >
+              <p id="minVal">0</p>
+              <p id="maxVal">100</p>
+            </div>
+
+            <div id="demo" style="margin-left: 10"></div>
+          </div>
+
+          <div class="categoryGrid">
+            <div class="widgetContainer">
+              <label for="system">Input1:</label>
+              <br />
+              <input type="text" />
+            </div>
+            <div class="widgetContainer">
+              <label for="system">Dropdown1:</label>
+              <br />
+              <select name="system" id="system">
+                <option value="Option1">Option1</option>
+                <option value="Option2">Option2</option>
+                <option value="Option3">Option3</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    const range = document.getElementById("range"),
+      rangeV = document.getElementById("rangeV"),
+      setValue = () => {
+        const newValue = Number(
+            ((range.value - range.min) * 100) / (range.max - range.min)
+          ),
+          newPosition = 10 - newValue * 0.2;
+        rangeV.innerHTML = `<span>${range.value}</span>`;
+        rangeV.style.left = `calc(${newValue}% + (${newPosition}px))`;
+      };
+    document.addEventListener("DOMContentLoaded", setValue);
+    range.addEventListener("input", setValue);
+
+    // var range = document.getElementById("myRange");
+    // var output = document.getElementById("demo");
+
+    // // Update the current slider value (each time you drag the slider handle)
+    // slider.oninput = function () {
+    //   (newValue = Number(
+    //     ((range.value - range.min) * 100) / (range.max - range.min)
+    //   )),
+    //     (newPosition = 10 - newValue * 0.2);
+    //   output.innerHTML = `<span>${range.value}</span>`;
+    //   output.style.left = `calc(${newValue}% + (${newPosition}px))`;
+    // };
+  </script>
+</html>

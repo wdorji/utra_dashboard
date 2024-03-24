@@ -66,25 +66,7 @@ app.mySmqBrokerDir = smqDir
 
 -- local io = require "io"
 
--- local function send_file_content(msg, ftid)
 
---     -- Open the file in read mode
-
---     local file = io.open("www/public/" .. msg, "r")
-
---     if file then
---         -- Read the contents of the file
---         local content = file:read("*all")
-        
---         smq:publish(content, "file_content_response")
-        
---         -- Close the file
---         file:close()
---     else
---         -- Print an error message if the file couldn't be opened
---         print("Error: Unable to open the file")
---     end
--- end
 
 -- local function overwrite_file_content(msg, ftid)
 --     -- Open the file in write mode
@@ -224,6 +206,30 @@ end
  
 smq:subscribe("evaluate_command_request", {onmsg=evaluate_command})
 
+local json = require('cjson')
+
+local function send_nav_names(msg, ftid)
+
+    -- Open the file in read mode
+
+    local file = io.open("www/public/nav_data.json", "r")
+
+    if file then
+        -- Read the contents of the file
+        local content = file:read("*all")
+   
+        
+        smq:publish(ba.json.encode(json.decode(content)), "nav_items_response")
+        
+        -- Close the file
+        file:close()
+    else
+        -- Print an error message if the file couldn't be opened
+        print("Error: Unable to open the file")
+    end
+end
+
+smq:subscribe("nav_names_request", {onmsg=send_nav_names})
 
 
 
