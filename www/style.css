@@ -431,6 +431,7 @@ input[type="submit"] {
   padding: 5;
   font-size: small;
   display: flex;
+  justify-content: space-between;
 }
 
 .widgetContainer:hover {
@@ -536,4 +537,9 @@ input[type="range"]:focus::-webkit-slider-runnable-track {
   left: 50%;
   margin-left: -5px;
   margin-top: -1px;
+}
+.boundsWrapper {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }

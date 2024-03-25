@@ -36,25 +36,6 @@
 
       $(function () {
         var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
-        // var smq = SMQ.Client("wss://simplemq.com/smq.lsp");
-
-        function insertRow(time, state, elapsed) {
-          var table = document.getElementById("myTable");
-          var row = table.insertRow(table.rows.length);
-          var cell1 = row.insertCell(0);
-          var cell2 = row.insertCell(1);
-          var cell3 = row.insertCell(2);
-          cell1.innerHTML = time;
-          cell2.innerHTML = state;
-          cell3.innerHTML = elapsed;
-        }
-
-        function onValueUpdate(msg, ftid) {
-          console.log("received: ", msg);
-          insertRow(msg.time, msg.state, msg.elapsed);
-        }
-
-        smq.subscribe("tableView", { onmsg: onValueUpdate, datatype: "json" });
 
         function onNavNames(msg, ftid) {
           const navList = document.getElementsByClassName("nav__list")[0];
@@ -82,6 +63,243 @@
         });
 
         smq.publish("signal", "nav_names_request");
+
+        function onParameters(msg, ftid) {
+          const controlGrid = document.getElementsByClassName("controlGrid")[0];
+          const uncategorised = [];
+          const categorised = new Map();
+          const categories = [];
+
+          console.log(msg);
+
+          for (let i = 0; i < msg.length; i++) {
+            if (!msg[i].category) {
+              uncategorised.push(msg[i]);
+            } else if (categorised.has(msg[i].category)) {
+              categorised.get(msg[i].category).push(msg[i]);
+              categories.push(msg[i].category);
+            } else {
+              categorised.set(msg[i].category, [msg[i]]);
+            }
+          }
+
+          if (uncategorised.length > 0) {
+            const uncategorisedGrid = document.createElement("div");
+            uncategorisedGrid.className = "uncategorisedGrid";
+
+            const uncategorisedWrapper = document.createElement("div");
+
+            for (let i = 0; i < uncategorised.length; i++) {
+              const widgetData = uncategorised[i];
+
+              if (widgetData.widgetType === "dropdown") {
+                const widgetContainer = document.createElement("div");
+                widgetContainer.className = "widgetContainer";
+
+                const dropdownLabel = document.createElement("label");
+                dropdownLabel.textContent = widgetData.name + ":";
+
+                widgetContainer.append(dropdownLabel);
+
+                const dropdownSelect = document.createElement("select");
+
+                widgetData.options.forEach((element) => {
+                  const curOption = document.createElement("option");
+                  curOption.value = element;
+                  curOption.textContent = element;
+                  dropdownSelect.append(curOption);
+                });
+                widgetContainer.append(dropdownSelect);
+
+                uncategorisedGrid.append(widgetContainer);
+              } else if (widgetData.widgetType === "range") {
+                const sliderContainer = document.createElement("div");
+                sliderContainer.className = "sliderContainer";
+
+                const sliderLabel = document.createElement("label");
+                sliderLabel.textContent =
+                  widgetData.name + ": " + widgetData.value;
+
+                sliderContainer.append(sliderLabel);
+                const rangeWrapper = document.createElement("div");
+                const slider = document.createElement("input");
+                slider.type = "range";
+                slider.id = widgetData.name + "_range";
+                slider.min = widgetData.min;
+                slider.max = widgetData.max;
+                slider.value = widgetData.value;
+                slider.step = widgetData.step;
+
+                rangeWrapper.append(slider);
+
+                sliderContainer.append(rangeWrapper);
+
+                const rangeBounds = document.createElement("div");
+                rangeBounds.className = "boundsWrapper";
+
+                const upperBound = document.createElement("p");
+                upperBound.id = widgetData.name + "_max";
+                upperBound.textContent = widgetData.max;
+
+                const lowerBound = document.createElement("p");
+                lowerBound.id = widgetData.name + "_min";
+                lowerBound.textContent = widgetData.min;
+                rangeBounds.append(lowerBound);
+                rangeBounds.append(upperBound);
+                sliderContainer.append(rangeBounds);
+
+                slider.oninput = function () {
+                  sliderLabel.textContent = widgetData.name + ": " + this.value;
+                };
+
+                uncategorisedWrapper.append(sliderContainer);
+              } else {
+                const widgetContainer = document.createElement("div");
+                widgetContainer.className = "widgetContainer";
+
+                const widgetLabel = document.createElement("label");
+                widgetLabel.textContent = widgetData.name + ":";
+
+                widgetContainer.append(widgetLabel);
+
+                const widgetInput = document.createElement("input");
+                widgetInput.type = widgetData.widgetType;
+
+                if (widgetInput.type == "text") {
+                  console.log(
+                    widgetData.placeholder,
+                    typeof widgetData.placeholder
+                  );
+                  widgetInput.placeholder = widgetData.placeholder;
+                } else {
+                  widgetInput.checked = widgetData.checked;
+                }
+
+                widgetContainer.append(widgetInput);
+
+                uncategorisedGrid.append(widgetContainer);
+              }
+            }
+            uncategorisedWrapper.append(uncategorisedGrid);
+            controlGrid.append(uncategorisedWrapper);
+          }
+
+          if (categories.length > 0) {
+            for (let c = 0; c < categories.length; c++) {
+              const curCategory = categories[c];
+
+              const categoryGrid = document.createElement("div");
+              categoryGrid.className = "categoryGrid";
+
+              const categoryWrapper = document.createElement("div");
+              categoryWrapper.className = "categoryWrapper";
+
+              const categoryWidgets = categorised.get(curCategory);
+
+              for (let i = 0; i < categoryWidgets.length; i++) {
+                const widgetData = categoryWidgets[i];
+
+                if (widgetData.widgetType === "dropdown") {
+                  const widgetContainer = document.createElement("div");
+                  widgetContainer.className = "widgetContainer";
+
+                  const dropdownLabel = document.createElement("label");
+                  dropdownLabel.textContent = widgetData.name + ":";
+
+                  widgetContainer.append(dropdownLabel);
+
+                  const dropdownSelect = document.createElement("select");
+
+                  widgetData.options.forEach((element) => {
+                    const curOption = document.createElement("option");
+                    curOption.value = element;
+                    curOption.textContent = element;
+                    dropdownSelect.append(curOption);
+                  });
+                  widgetContainer.append(dropdownSelect);
+
+                  categoryGrid.append(widgetContainer);
+                } else if (widgetData.widgetType === "range") {
+                  const sliderContainer = document.createElement("div");
+                  sliderContainer.className = "sliderContainer";
+
+                  const sliderLabel = document.createElement("label");
+                  sliderLabel.textContent =
+                    widgetData.name + ": " + widgetData.value;
+
+                  sliderContainer.append(sliderLabel);
+                  const rangeWrapper = document.createElement("div");
+                  const slider = document.createElement("input");
+                  slider.type = "range";
+                  slider.id = widgetData.name + "_range";
+                  slider.min = widgetData.min;
+                  slider.max = widgetData.max;
+                  slider.value = widgetData.value;
+                  slider.step = widgetData.step;
+
+                  rangeWrapper.append(slider);
+
+                  sliderContainer.append(rangeWrapper);
+
+                  const rangeBounds = document.createElement("div");
+                  rangeBounds.className = "boundsWrapper";
+
+                  const upperBound = document.createElement("p");
+                  upperBound.id = widgetData.name + "_max";
+                  upperBound.textContent = widgetData.max;
+
+                  const lowerBound = document.createElement("p");
+                  lowerBound.id = widgetData.name + "_min";
+                  lowerBound.textContent = widgetData.min;
+                  rangeBounds.append(lowerBound);
+                  rangeBounds.append(upperBound);
+                  sliderContainer.append(rangeBounds);
+
+                  slider.oninput = function () {
+                    sliderLabel.textContent =
+                      widgetData.name + ": " + this.value;
+                  };
+
+                  categoryWrapper.append(sliderContainer);
+                } else {
+                  const widgetContainer = document.createElement("div");
+                  widgetContainer.className = "widgetContainer";
+
+                  const widgetLabel = document.createElement("label");
+                  widgetLabel.textContent = widgetData.name + ":";
+
+                  widgetContainer.append(widgetLabel);
+
+                  const widgetInput = document.createElement("input");
+                  widgetInput.type = widgetData.widgetType;
+
+                  if (widgetInput.type == "text") {
+                    console.log(
+                      widgetData.placeholder,
+                      typeof widgetData.placeholder
+                    );
+                    widgetInput.placeholder = widgetData.placeholder;
+                  } else {
+                    widgetInput.checked = widgetData.checked;
+                  }
+
+                  widgetContainer.append(widgetInput);
+
+                  categoryGrid.append(widgetContainer);
+                }
+              }
+              categoryWrapper.append(categoryGrid);
+              controlGrid.append(categoryWrapper);
+            }
+          }
+        }
+
+        smq.subscribe("parameters_response", {
+          onmsg: onParameters,
+          datatype: "json",
+        });
+
+        smq.publish("signal", "parameters_request");
       });
     </script>
   </head>
@@ -99,10 +317,9 @@
     <h1 style="margin: 3%">Control Viewer</h1>
     <div class="controlWrapper">
       <div class="controlGrid">
-        <div class="categoryWrapper">
+        <!-- <div class="categoryWrapper">
           <div class="sliderContainer">
             <label for="system">Slider1:</label>
-            <br />
             <div class="range-wrap">
               <div class="range-value" id="rangeV"></div>
               <input
@@ -115,25 +332,25 @@
               />
             </div>
 
-            <div
-              style="display: flex; justify-content: space-between; width: 100%"
-            >
+            <div class="boundsWrapper">
               <p id="minVal">0</p>
               <p id="maxVal">100</p>
             </div>
-
-            <div id="demo" style="margin-left: 10"></div>
           </div>
 
           <div class="categoryGrid">
             <div class="widgetContainer">
-              <label for="system">Input1:</label>
-              <br />
+              <label>Input1:</label>
+
               <input type="text" />
             </div>
             <div class="widgetContainer">
-              <label for="system">Dropdown1:</label>
-              <br />
+              <label>Check1:</label>
+
+              <input type="checkbox" />
+            </div>
+            <div class="widgetContainer">
+              <label>Dropdown1:</label>
               <select name="system" id="system">
                 <option value="Option1">Option1</option>
                 <option value="Option2">Option2</option>
@@ -141,36 +358,8 @@
               </select>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </body>
-
-  <script>
-    const range = document.getElementById("range"),
-      rangeV = document.getElementById("rangeV"),
-      setValue = () => {
-        const newValue = Number(
-            ((range.value - range.min) * 100) / (range.max - range.min)
-          ),
-          newPosition = 10 - newValue * 0.2;
-        rangeV.innerHTML = `<span>${range.value}</span>`;
-        rangeV.style.left = `calc(${newValue}% + (${newPosition}px))`;
-      };
-    document.addEventListener("DOMContentLoaded", setValue);
-    range.addEventListener("input", setValue);
-
-    // var range = document.getElementById("myRange");
-    // var output = document.getElementById("demo");
-
-    // // Update the current slider value (each time you drag the slider handle)
-    // slider.oninput = function () {
-    //   (newValue = Number(
-    //     ((range.value - range.min) * 100) / (range.max - range.min)
-    //   )),
-    //     (newPosition = 10 - newValue * 0.2);
-    //   output.innerHTML = `<span>${range.value}</span>`;
-    //   output.style.left = `calc(${newValue}% + (${newPosition}px))`;
-    // };
-  </script>
 </html>

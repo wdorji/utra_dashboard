@@ -95,6 +95,14 @@ if not su.exist"file" then
    su.close(env,conn)
 end
 
+
+if not su.exist"config" then
+    -- Create a database environment object and open data/config.sqlite.db
+    local env,conn = su.open"config"
+    conn:execute"CREATE TABLE configs (key INTEGER PRIMARY KEY, fileType TEXT, setting1 TEXT, setting2 TEXT)"
+    su.close(env,conn)
+ end
+
 -- Start getting file names functionality
 
 local function send_file_names()
@@ -155,6 +163,23 @@ local function insert_data(msg, ftid)
 end
 
 smq:subscribe("insert_data_request", {onmsg=insert_data, json=true})
+
+local function insert_config_data(msg, ftid)
+    local fileName=luasql.quotestr(msg.fileName)-- Quote msg and prevent SQL injection by escaping any ' characters
+    local content=luasql.quotestr(msg.content)
+    local filePath=luasql.quotestr(msg.filePath)
+    local sql=string.format("INSERT INTO configs (fileName, content, filePath) values(%s, %s, %s)",fileName, content, filePath)
+    local env,conn = su.open"config"
+    local ok,err=conn:execute(sql) -- Insert msg into database
+    if ok then 
+        print("Data inserted!")     
+    else
+        trace("Inserting DB failed",err)
+    end
+    su.close(env,conn)
+end
+
+smq:subscribe("insert_data_request", {onmsg=insert_config_data, json=true})
 
 
 local function overwrite_file_content(msg, ftid)
@@ -230,6 +255,30 @@ local function send_nav_names(msg, ftid)
 end
 
 smq:subscribe("nav_names_request", {onmsg=send_nav_names})
+
+
+local function send_parameters(msg, ftid)
+
+    -- Open the file in read mode
+
+    local file = io.open("www/public/control_data.json", "r")
+
+    if file then
+        -- Read the contents of the file
+        local content = file:read("*all")
+   
+        
+        smq:publish(ba.json.encode(json.decode(content)), "parameters_response")
+        
+        -- Close the file
+        file:close()
+    else
+        -- Print an error message if the file couldn't be opened
+        print("Error: Unable to open the file")
+    end
+end
+
+smq:subscribe("parameters_request", {onmsg=send_parameters})
 
 
 
