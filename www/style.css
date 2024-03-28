@@ -398,7 +398,7 @@ input[type="submit"] {
 
 .controlGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 10px;
   grid-auto-rows: minmax(100px, auto);
 }
@@ -409,6 +409,8 @@ input[type="submit"] {
 }
 
 .categoryGrid {
+  /* width: 300px; */
+  width: fit-content;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   padding: 10;
@@ -419,6 +421,7 @@ input[type="submit"] {
 }
 
 .uncategorisedGrid {
+  /* width: 300px; */
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   padding: 10;
@@ -428,6 +431,8 @@ input[type="submit"] {
 }
 
 .widgetContainer {
+  /* max-width: 100px; */
+  border-radius: 0.3rem;
   padding: 5;
   font-size: small;
   display: flex;
@@ -457,8 +462,8 @@ input[type="submit"] {
 }
 
 .widgetContainer input {
-  margin-left: 10;
-  width: 70;
+  margin-left: 5;
+  width: 50;
   height: 20;
 }
 
@@ -542,4 +547,16 @@ input[type="range"]:focus::-webkit-slider-runnable-track {
   display: flex;
   justify-content: space-between;
   width: 100%;
+}
+
+.counterWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.counterWrapper .counterButton {
+  display: flex;
+  flex-direction: column;
+  margin-left: 5px;
 }

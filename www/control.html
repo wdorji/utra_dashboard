@@ -294,10 +294,10 @@
           }
         }
 
-        smq.subscribe("parameters_response", {
-          onmsg: onParameters,
-          datatype: "json",
-        });
+        // smq.subscribe("parameters_response", {
+        //   onmsg: onParameters,
+        //   datatype: "json",
+        // });
 
         smq.publish("signal", "parameters_request");
       });
@@ -317,32 +317,24 @@
     <h1 style="margin: 3%">Control Viewer</h1>
     <div class="controlWrapper">
       <div class="controlGrid">
-        <!-- <div class="categoryWrapper">
-          <div class="sliderContainer">
-            <label for="system">Slider1:</label>
-            <div class="range-wrap">
-              <div class="range-value" id="rangeV"></div>
-              <input
-                id="range"
-                type="range"
-                min="200"
-                max="800"
-                value="200"
-                step="1"
-              />
-            </div>
-
-            <div class="boundsWrapper">
-              <p id="minVal">0</p>
-              <p id="maxVal">100</p>
-            </div>
-          </div>
-
+        <div class="categoryWrapper">
           <div class="categoryGrid">
             <div class="widgetContainer">
               <label>Input1:</label>
 
               <input type="text" />
+            </div>
+
+            <div class="widgetContainer">
+              <label>ID1:</label>
+
+              <div class="counterWrapper">
+                <input type="text" id="valueInput" value="0" />
+                <div class="counterButton">
+                  <a href="#" onclick="incrementValue()">&#9650;</a>
+                  <a href="#" onclick="decrementValue()">&#9660;</a>
+                </div>
+              </div>
             </div>
             <div class="widgetContainer">
               <label>Check1:</label>
@@ -350,7 +342,7 @@
               <input type="checkbox" />
             </div>
             <div class="widgetContainer">
-              <label>Dropdown1:</label>
+              <label>Combo1:</label>
               <select name="system" id="system">
                 <option value="Option1">Option1</option>
                 <option value="Option2">Option2</option>
@@ -358,8 +350,19 @@
               </select>
             </div>
           </div>
-        </div> -->
+        </div>
       </div>
     </div>
   </body>
+  <script>
+    function incrementValue() {
+      var input = document.getElementById("valueInput");
+      input.value = parseInt(input.value) + 1; // Increment value by 1
+    }
+
+    function decrementValue() {
+      var input = document.getElementById("valueInput");
+      input.value = parseInt(input.value) - 1; // Decrement value by 1
+    }
+  </script>
 </html>
