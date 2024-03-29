@@ -92,15 +92,15 @@
             for (let i = 0; i < uncategorised.length; i++) {
               const widgetData = uncategorised[i];
 
+              const widgetContainer = document.createElement("div");
+              widgetContainer.className = "widgetContainer";
+
+              const widgetLabel = document.createElement("label");
+              widgetLabel.textContent = widgetData.name + ":";
+
+              widgetContainer.append(widgetLabel);
+
               if (widgetData.widgetType === "dropdown") {
-                const widgetContainer = document.createElement("div");
-                widgetContainer.className = "widgetContainer";
-
-                const dropdownLabel = document.createElement("label");
-                dropdownLabel.textContent = widgetData.name + ":";
-
-                widgetContainer.append(dropdownLabel);
-
                 const dropdownSelect = document.createElement("select");
 
                 widgetData.options.forEach((element) => {
@@ -112,70 +112,49 @@
                 widgetContainer.append(dropdownSelect);
 
                 uncategorisedGrid.append(widgetContainer);
-              } else if (widgetData.widgetType === "range") {
-                const sliderContainer = document.createElement("div");
-                sliderContainer.className = "sliderContainer";
-
-                const sliderLabel = document.createElement("label");
-                sliderLabel.textContent =
-                  widgetData.name + ": " + widgetData.value;
-
-                sliderContainer.append(sliderLabel);
-                const rangeWrapper = document.createElement("div");
-                const slider = document.createElement("input");
-                slider.type = "range";
-                slider.id = widgetData.name + "_range";
-                slider.min = widgetData.min;
-                slider.max = widgetData.max;
-                slider.value = widgetData.value;
-                slider.step = widgetData.step;
-
-                rangeWrapper.append(slider);
-
-                sliderContainer.append(rangeWrapper);
-
-                const rangeBounds = document.createElement("div");
-                rangeBounds.className = "boundsWrapper";
-
-                const upperBound = document.createElement("p");
-                upperBound.id = widgetData.name + "_max";
-                upperBound.textContent = widgetData.max;
-
-                const lowerBound = document.createElement("p");
-                lowerBound.id = widgetData.name + "_min";
-                lowerBound.textContent = widgetData.min;
-                rangeBounds.append(lowerBound);
-                rangeBounds.append(upperBound);
-                sliderContainer.append(rangeBounds);
-
-                slider.oninput = function () {
-                  sliderLabel.textContent = widgetData.name + ": " + this.value;
-                };
-
-                uncategorisedWrapper.append(sliderContainer);
               } else {
-                const widgetContainer = document.createElement("div");
-                widgetContainer.className = "widgetContainer";
-
-                const widgetLabel = document.createElement("label");
-                widgetLabel.textContent = widgetData.name + ":";
-
-                widgetContainer.append(widgetLabel);
-
                 const widgetInput = document.createElement("input");
-                widgetInput.type = widgetData.widgetType;
 
-                if (widgetInput.type == "text") {
-                  console.log(
-                    widgetData.placeholder,
-                    typeof widgetData.placeholder
-                  );
-                  widgetInput.placeholder = widgetData.placeholder;
+                if (widgetData.widgetType == "text") {
+                  // console.log(
+                  //   widgetData.placeholder,
+                  //   typeof widgetData.placeholder
+                  // );
+                  widgetInput.type = "text";
+                  widgetInput.value = widgetData.placeholder;
+
+                  widgetContainer.append(widgetInput);
+                } else if (widgetData.widgetType == "range") {
+                  widgetInput.value = widgetData.value;
+                  widgetInput.id = widgetInput.name;
+
+                  const counterWrapper = document.createElement("div");
+                  counterWrapper.className = "counterWrapper";
+                  const counterButton = document.createElement("div");
+                  counterButton.className = "counterButton";
+
+                  const incButton = document.createElement("a");
+                  incButton.innerHTML = "&#9650;";
+                  incButton.addEventListener("click", function () {
+                    widgetInput.value = +widgetInput.value + widgetData.step;
+                  });
+
+                  const decButton = document.createElement("a");
+                  decButton.innerHTML = "&#9660;";
+                  decButton.addEventListener("click", function () {
+                    widgetInput.value = +widgetInput.value - widgetData.step;
+                  });
+
+                  counterWrapper.append(widgetInput);
+                  counterButton.append(incButton);
+                  counterButton.append(decButton);
+                  counterWrapper.append(counterButton);
+                  widgetContainer.append(counterWrapper);
                 } else {
+                  widgetInput.type = "checkbox";
                   widgetInput.checked = widgetData.checked;
+                  widgetContainer.append(widgetInput);
                 }
-
-                widgetContainer.append(widgetInput);
 
                 uncategorisedGrid.append(widgetContainer);
               }
@@ -199,15 +178,15 @@
               for (let i = 0; i < categoryWidgets.length; i++) {
                 const widgetData = categoryWidgets[i];
 
+                const widgetContainer = document.createElement("div");
+                widgetContainer.className = "widgetContainer";
+
+                const widgetLabel = document.createElement("label");
+                widgetLabel.textContent = widgetData.name + ":";
+
+                widgetContainer.append(widgetLabel);
+
                 if (widgetData.widgetType === "dropdown") {
-                  const widgetContainer = document.createElement("div");
-                  widgetContainer.className = "widgetContainer";
-
-                  const dropdownLabel = document.createElement("label");
-                  dropdownLabel.textContent = widgetData.name + ":";
-
-                  widgetContainer.append(dropdownLabel);
-
                   const dropdownSelect = document.createElement("select");
 
                   widgetData.options.forEach((element) => {
@@ -219,71 +198,52 @@
                   widgetContainer.append(dropdownSelect);
 
                   categoryGrid.append(widgetContainer);
-                } else if (widgetData.widgetType === "range") {
-                  const sliderContainer = document.createElement("div");
-                  sliderContainer.className = "sliderContainer";
-
-                  const sliderLabel = document.createElement("label");
-                  sliderLabel.textContent =
-                    widgetData.name + ": " + widgetData.value;
-
-                  sliderContainer.append(sliderLabel);
-                  const rangeWrapper = document.createElement("div");
-                  const slider = document.createElement("input");
-                  slider.type = "range";
-                  slider.id = widgetData.name + "_range";
-                  slider.min = widgetData.min;
-                  slider.max = widgetData.max;
-                  slider.value = widgetData.value;
-                  slider.step = widgetData.step;
-
-                  rangeWrapper.append(slider);
-
-                  sliderContainer.append(rangeWrapper);
-
-                  const rangeBounds = document.createElement("div");
-                  rangeBounds.className = "boundsWrapper";
-
-                  const upperBound = document.createElement("p");
-                  upperBound.id = widgetData.name + "_max";
-                  upperBound.textContent = widgetData.max;
-
-                  const lowerBound = document.createElement("p");
-                  lowerBound.id = widgetData.name + "_min";
-                  lowerBound.textContent = widgetData.min;
-                  rangeBounds.append(lowerBound);
-                  rangeBounds.append(upperBound);
-                  sliderContainer.append(rangeBounds);
-
-                  slider.oninput = function () {
-                    sliderLabel.textContent =
-                      widgetData.name + ": " + this.value;
-                  };
-
-                  categoryWrapper.append(sliderContainer);
                 } else {
-                  const widgetContainer = document.createElement("div");
-                  widgetContainer.className = "widgetContainer";
-
-                  const widgetLabel = document.createElement("label");
-                  widgetLabel.textContent = widgetData.name + ":";
-
-                  widgetContainer.append(widgetLabel);
-
                   const widgetInput = document.createElement("input");
-                  widgetInput.type = widgetData.widgetType;
 
-                  if (widgetInput.type == "text") {
-                    console.log(
-                      widgetData.placeholder,
-                      typeof widgetData.placeholder
-                    );
-                    widgetInput.placeholder = widgetData.placeholder;
+                  if (widgetData.widgetType == "text") {
+                    // console.log(
+                    //   widgetData.placeholder,
+                    //   typeof widgetData.placeholder
+                    // );
+                    widgetInput.type = "text";
+                    widgetInput.value = widgetData.placeholder;
+                    console.log("text", widgetData.name);
+
+                    widgetContainer.append(widgetInput);
+                  } else if (widgetData.widgetType == "range") {
+                    widgetInput.id = widgetInput.name;
+                    widgetInput.value = widgetData.value;
+
+                    const counterWrapper = document.createElement("div");
+                    counterWrapper.className = "counterWrapper";
+                    const counterButton = document.createElement("div");
+                    counterButton.className = "counterButton";
+
+                    console.log("sds");
+
+                    const incButton = document.createElement("a");
+                    incButton.innerHTML = "&#9650;";
+                    incButton.addEventListener("click", function () {
+                      widgetInput.value = +widgetInput.value + widgetData.step;
+                    });
+
+                    const decButton = document.createElement("a");
+                    decButton.innerHTML = "&#9660;";
+                    decButton.addEventListener("click", function () {
+                      widgetInput.value = +widgetInput.value - widgetData.step;
+                    });
+
+                    counterWrapper.append(widgetInput);
+                    counterButton.append(incButton);
+                    counterButton.append(decButton);
+                    counterWrapper.append(counterButton);
+                    widgetContainer.append(counterWrapper);
                   } else {
+                    widgetInput.type = "checkbox";
                     widgetInput.checked = widgetData.checked;
+                    widgetContainer.append(widgetInput);
                   }
-
-                  widgetContainer.append(widgetInput);
 
                   categoryGrid.append(widgetContainer);
                 }
@@ -294,10 +254,10 @@
           }
         }
 
-        // smq.subscribe("parameters_response", {
-        //   onmsg: onParameters,
-        //   datatype: "json",
-        // });
+        smq.subscribe("parameters_response", {
+          onmsg: onParameters,
+          datatype: "json",
+        });
 
         smq.publish("signal", "parameters_request");
       });
@@ -316,42 +276,7 @@
     </header>
     <h1 style="margin: 3%">Control Viewer</h1>
     <div class="controlWrapper">
-      <div class="controlGrid">
-        <div class="categoryWrapper">
-          <div class="categoryGrid">
-            <div class="widgetContainer">
-              <label>Input1:</label>
-
-              <input type="text" />
-            </div>
-
-            <div class="widgetContainer">
-              <label>ID1:</label>
-
-              <div class="counterWrapper">
-                <input type="text" id="valueInput" value="0" />
-                <div class="counterButton">
-                  <a href="#" onclick="incrementValue()">&#9650;</a>
-                  <a href="#" onclick="decrementValue()">&#9660;</a>
-                </div>
-              </div>
-            </div>
-            <div class="widgetContainer">
-              <label>Check1:</label>
-
-              <input type="checkbox" />
-            </div>
-            <div class="widgetContainer">
-              <label>Combo1:</label>
-              <select name="system" id="system">
-                <option value="Option1">Option1</option>
-                <option value="Option2">Option2</option>
-                <option value="Option3">Option3</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="controlGrid"></div>
     </div>
   </body>
   <script>
