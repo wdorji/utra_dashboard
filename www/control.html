@@ -135,12 +135,14 @@
 
                   const incButton = document.createElement("a");
                   incButton.innerHTML = "&#9650;";
+                  incButton.style.fontSize = 10;
                   incButton.addEventListener("click", function () {
                     widgetInput.value = +widgetInput.value + widgetData.step;
                   });
 
                   const decButton = document.createElement("a");
                   decButton.innerHTML = "&#9660;";
+                  decButton.style.fontSize = 10;
                   decButton.addEventListener("click", function () {
                     widgetInput.value = +widgetInput.value - widgetData.step;
                   });
@@ -220,16 +222,16 @@
                     const counterButton = document.createElement("div");
                     counterButton.className = "counterButton";
 
-                    console.log("sds");
-
                     const incButton = document.createElement("a");
                     incButton.innerHTML = "&#9650;";
+                    incButton.style.fontSize = 10;
                     incButton.addEventListener("click", function () {
                       widgetInput.value = +widgetInput.value + widgetData.step;
                     });
 
                     const decButton = document.createElement("a");
                     decButton.innerHTML = "&#9660;";
+                    decButton.style.fontSize = 10;
                     decButton.addEventListener("click", function () {
                       widgetInput.value = +widgetInput.value - widgetData.step;
                     });

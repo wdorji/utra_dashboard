@@ -468,11 +468,12 @@ input[type="submit"] {
 }
 
 .counterWrapper .counterButton {
+  border-radius: 2rem;
+  margin-left: 4;
   display: flex;
   flex-direction: column;
-  margin-left: 5px;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  justify-content: space-around;
+  background-color: rgb(188, 188, 188);
 }
 
 .counterWrapper .counterButton a:hover {
