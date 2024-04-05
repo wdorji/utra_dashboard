@@ -41,7 +41,8 @@
       const split = window.location.href.split("/");
       const currentUrl = split[split.length - 1];
 
-      console.log(currentUrl);
+      // Create an object to store directories that have been created already
+      const directoryMap = {};
 
       $(function () {
         var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
@@ -116,7 +117,7 @@
             navItem.className = "nav__item";
             const aElement = document.createElement("a");
             aElement.className = "nav__link";
-            if (msg[i].href === ".") {
+            if (msg[i].href === currentUrl) {
               aElement.className = "active";
             }
 
@@ -128,6 +129,79 @@
             navList.append(navItem);
           }
         }
+
+        function onFileName(msg, ftid) {
+          console.log(msg);
+          const fileName = msg.fileName; // Extract file name from path
+          const filePath = msg.filePath;
+          const key = msg.key;
+
+          const directories = filePath.split("/").slice(0, -1);
+
+          var uiElement = $(".sidebar");
+          var spacing = 0;
+
+          if (directories.length !== 0) {
+            directories.forEach((directory) => {
+              if (!directoryMap[directory]) {
+                //if directory not rendered yet
+
+                const directoryName = document.createElement("div");
+                directoryName.setAttribute("data-directory", directory);
+                directoryName.innerHTML =
+                  "&#9656; " + directoryName.getAttribute("data-directory"); //right
+
+                directoryName.style.marginLeft = spacing;
+
+                const directoryList = document.createElement("sidebar");
+
+                directoryName.addEventListener("click", function () {
+                  if (directoryList.style.display === "none") {
+                    directoryList.style.display = "block";
+                    directoryName.innerHTML =
+                      "&#9662; " + directoryName.getAttribute("data-directory"); //down
+                  } else {
+                    directoryList.style.display = "none";
+                    directoryName.innerHTML =
+                      "&#9656; " + directoryName.getAttribute("data-directory"); //right
+                  }
+                });
+
+                directoryList.style.display = "none";
+                uiElement.append(directoryName);
+                uiElement.append(directoryList);
+                uiElement = directoryList;
+                directoryMap[directory] = uiElement;
+              }
+
+              uiElement = directoryMap[directory];
+              spacing += 10;
+            });
+          }
+
+          const button = document.createElement("div");
+          button.textContent = fileName;
+          button.className = "fileButton";
+          button.style.marginLeft = spacing;
+
+          button.setAttribute("data-filename", fileName); // Set data attribute for filename
+          button.setAttribute("data-key", key); // Set data attribute for key
+          button.addEventListener("click", function () {
+            createTabButton(
+              button.getAttribute("data-filename"),
+              button.getAttribute("data-key")
+            );
+          });
+
+          uiElement.append(button);
+        }
+
+        smq.subscribe("file_names_response", {
+          onmsg: onFileName,
+          datatype: "json",
+        });
+
+        smq.publish("signal", "file_names_request");
 
         smq.subscribe("nav_items_response", {
           onmsg: onNavNames,
@@ -150,24 +224,13 @@
         </nav>
       </div>
     </header>
-    <h1 style="margin-left: 3%; margin-top: 2%; margin-bottom: 2%">
+    <!-- <h1 style="margin-left: 3%; margin-top: 2%; margin-bottom: 2%">
       ESS Viewer
-    </h1>
+    </h1> -->
 
-    <button class="experimentButton" id="table">Go</button>
+    <div class="sidebar" ><h3 >Display options:</h1></div>
+    </div>
 
-    <!-- <section class="table__body">
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>State</th>
-            <th>Elapsed</th>
-          </tr>
-        </thead>
-        <tbody id="myTable"></tbody>
-      </table>
-    </section> -->
     <div id="example-table" style="margin: 3%; height: 500px"></div>
   </body>
 </html>

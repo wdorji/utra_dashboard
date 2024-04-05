@@ -70,100 +70,101 @@
           const categorised = new Map();
           const categories = [];
 
-          console.log(msg);
+          // console.log(msg);
 
           for (let i = 0; i < msg.length; i++) {
             if (!msg[i].category) {
-              uncategorised.push(msg[i]);
+              // uncategorised.push(msg[i]);
+              continue;
             } else if (categorised.has(msg[i].category)) {
               categorised.get(msg[i].category).push(msg[i]);
-              categories.push(msg[i].category);
             } else {
               categorised.set(msg[i].category, [msg[i]]);
+              categories.push(msg[i].category);
             }
           }
 
-          if (uncategorised.length > 0) {
-            const uncategorisedGrid = document.createElement("div");
-            uncategorisedGrid.className = "uncategorisedGrid";
+          // if (uncategorised.length > 0) {
+          //   const uncategorisedGrid = document.createElement("div");
+          //   uncategorisedGrid.className = "uncategorisedGrid";
 
-            const uncategorisedWrapper = document.createElement("div");
+          //   const uncategorisedWrapper = document.createElement("div");
 
-            for (let i = 0; i < uncategorised.length; i++) {
-              const widgetData = uncategorised[i];
+          //   for (let i = 0; i < uncategorised.length; i++) {
+          //     const widgetData = uncategorised[i];
 
-              const widgetContainer = document.createElement("div");
-              widgetContainer.className = "widgetContainer";
+          //     const widgetContainer = document.createElement("div");
+          //     widgetContainer.className = "widgetContainer";
 
-              const widgetLabel = document.createElement("label");
-              widgetLabel.textContent = widgetData.name + ":";
+          //     const widgetLabel = document.createElement("label");
+          //     widgetLabel.textContent = widgetData.name + ":";
 
-              widgetContainer.append(widgetLabel);
+          //     widgetContainer.append(widgetLabel);
 
-              if (widgetData.widgetType === "dropdown") {
-                const dropdownSelect = document.createElement("select");
+          //     if (widgetData.widgetType === "dropdown") {
+          //       const dropdownSelect = document.createElement("select");
 
-                widgetData.options.forEach((element) => {
-                  const curOption = document.createElement("option");
-                  curOption.value = element;
-                  curOption.textContent = element;
-                  dropdownSelect.append(curOption);
-                });
-                widgetContainer.append(dropdownSelect);
+          //       widgetData.options.forEach((element) => {
+          //         const curOption = document.createElement("option");
+          //         curOption.value = element;
+          //         curOption.textContent = element;
+          //         dropdownSelect.append(curOption);
+          //       });
+          //       widgetContainer.append(dropdownSelect);
 
-                uncategorisedGrid.append(widgetContainer);
-              } else {
-                const widgetInput = document.createElement("input");
+          //       uncategorisedGrid.append(widgetContainer);
+          //     } else {
+          //       const widgetInput = document.createElement("input");
 
-                if (widgetData.widgetType == "text") {
-                  // console.log(
-                  //   widgetData.placeholder,
-                  //   typeof widgetData.placeholder
-                  // );
-                  widgetInput.type = "text";
-                  widgetInput.value = widgetData.placeholder;
+          //       if (widgetData.widgetType == "text") {
+          //         // console.log(
+          //         //   widgetData.placeholder,
+          //         //   typeof widgetData.placeholder
+          //         // );
+          //         widgetInput.type = "text";
+          //         widgetInput.value = widgetData.placeholder;
 
-                  widgetContainer.append(widgetInput);
-                } else if (widgetData.widgetType == "range") {
-                  widgetInput.value = widgetData.value;
-                  widgetInput.id = widgetInput.name;
+          //         widgetContainer.append(widgetInput);
+          //       } else if (widgetData.widgetType == "range") {
+          //         widgetInput.value = widgetData.value;
+          //         widgetInput.id = widgetInput.name;
 
-                  const counterWrapper = document.createElement("div");
-                  counterWrapper.className = "counterWrapper";
-                  const counterButton = document.createElement("div");
-                  counterButton.className = "counterButton";
+          //         const counterWrapper = document.createElement("div");
+          //         counterWrapper.className = "counterWrapper";
+          //         const counterButton = document.createElement("div");
+          //         counterButton.className = "counterButton";
 
-                  const incButton = document.createElement("a");
-                  incButton.innerHTML = "&#9650;";
-                  incButton.style.fontSize = 10;
-                  incButton.addEventListener("click", function () {
-                    widgetInput.value = +widgetInput.value + widgetData.step;
-                  });
+          //         const incButton = document.createElement("a");
+          //         incButton.innerHTML = "&#9650;";
+          //         incButton.style.fontSize = 10;
+          //         incButton.addEventListener("click", function () {
+          //           widgetInput.value = +widgetInput.value + widgetData.step;
+          //         });
 
-                  const decButton = document.createElement("a");
-                  decButton.innerHTML = "&#9660;";
-                  decButton.style.fontSize = 10;
-                  decButton.addEventListener("click", function () {
-                    widgetInput.value = +widgetInput.value - widgetData.step;
-                  });
+          //         const decButton = document.createElement("a");
+          //         decButton.innerHTML = "&#9660;";
+          //         decButton.style.fontSize = 10;
+          //         decButton.addEventListener("click", function () {
+          //           widgetInput.value = +widgetInput.value - widgetData.step;
+          //         });
 
-                  counterWrapper.append(widgetInput);
-                  counterButton.append(incButton);
-                  counterButton.append(decButton);
-                  counterWrapper.append(counterButton);
-                  widgetContainer.append(counterWrapper);
-                } else {
-                  widgetInput.type = "checkbox";
-                  widgetInput.checked = widgetData.checked;
-                  widgetContainer.append(widgetInput);
-                }
+          //         counterWrapper.append(widgetInput);
+          //         counterButton.append(incButton);
+          //         counterButton.append(decButton);
+          //         counterWrapper.append(counterButton);
+          //         widgetContainer.append(counterWrapper);
+          //       } else {
+          //         widgetInput.type = "checkbox";
+          //         widgetInput.checked = widgetData.checked;
+          //         widgetContainer.append(widgetInput);
+          //       }
 
-                uncategorisedGrid.append(widgetContainer);
-              }
-            }
-            uncategorisedWrapper.append(uncategorisedGrid);
-            controlGrid.append(uncategorisedWrapper);
-          }
+          //       uncategorisedGrid.append(widgetContainer);
+          //     }
+          //   }
+          //   uncategorisedWrapper.append(uncategorisedGrid);
+          //   controlGrid.append(uncategorisedWrapper);
+          // }
 
           if (categories.length > 0) {
             for (let c = 0; c < categories.length; c++) {
@@ -174,6 +175,12 @@
 
               const categoryWrapper = document.createElement("div");
               categoryWrapper.className = "categoryWrapper";
+
+              const categoryTitle = document.createElement("label");
+              categoryTitle.className = "categoryTitle";
+              categoryTitle.textContent = "Category name " + curCategory;
+
+              categoryWrapper.append(categoryTitle);
 
               const categoryWidgets = categorised.get(curCategory);
 
@@ -210,7 +217,7 @@
                     // );
                     widgetInput.type = "text";
                     widgetInput.value = widgetData.placeholder;
-                    console.log("text", widgetData.name);
+                    // console.log("text", widgetData.name);
 
                     widgetContainer.append(widgetInput);
                   } else if (widgetData.widgetType == "range") {
@@ -276,7 +283,7 @@
         </nav>
       </div>
     </header>
-    <h1 style="margin: 3%">Control Viewer</h1>
+    <h1 style="margin-top: 3%; margin-left: 3%">Control Viewer</h1>
     <div class="controlWrapper">
       <div class="controlGrid"></div>
     </div>
