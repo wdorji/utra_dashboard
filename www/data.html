@@ -4,6 +4,30 @@
     <!-- <link rel="stylesheet" type="text/css" href="style.css" /> -->
     <script src="/rtl/jquery.js"></script>
     <script src="/rtl/smq.js"></script>
+
+    <style>
+      .container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        background-color: #f0f0f0;
+      }
+
+      .hidden-box {
+        display: none;
+        position: absolute;
+        left: 100%;
+        width: 200px;
+        background-color: #ffffff;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+
+      .container:hover .hidden-box {
+        display: block;
+      }
+    </style>
+
     <script>
       $(function () {
         var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
@@ -58,11 +82,52 @@
 
         $("#chat").click(sendChatMsg);
         $("#table").click(insertRows);
+
+        [1, 2, 3, 4].forEach((num) => {
+          document.getElementById("button" + num.toString()).onpointerdown =
+            function () {
+              console.log("holding down " + num.toString());
+              const curData = {
+                time: num.toString(),
+                name: "button" + num.toString(),
+                data: "1",
+              };
+
+              smq.pubjson(curData, "Button" + num.toString() + "tableView");
+            };
+
+          document.getElementById("button" + num.toString()).onpointerup =
+            function () {
+              console.log("released " + num.toString());
+              const curData = {
+                time: num.toString(),
+                name: "button" + num.toString(),
+                data: "0",
+              };
+
+              smq.pubjson(curData, "Button" + num.toString() + "tableView");
+            };
+
+          smq.publish();
+        });
+
+        // $("#button1").click(sendButton1Msg);
+        // $("#button2").click(sendButton2Msg);
+        // $("#button3").click(sendButton3Msg);
+        // $("#button4").click(sendButton4Msg);
       });
     </script>
   </head>
   <body>
     <button id="chat">Send Chat</button>
     <button id="table">Send Table Data</button>
+    <button id="button1">Button 1</button>
+    <button id="button2">Button 2</button>
+    <button id="button3">Button 3</button>
+    <button id="button4">Button 4</button>
+    <div class="container">
+      Hover over me
+      <div class="hidden-box">This box is displayed only on hover.</div>
+    </div>
   </body>
 </html>

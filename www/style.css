@@ -504,3 +504,38 @@ input[type="submit"] {
   font-weight: 500;
   transition: all 0.2s;
 }
+
+.treeContainer {
+  margin: 3%;
+  padding: 4;
+  width: 500px;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+  height: 300px;
+  overflow: auto;
+}
+
+.treeContainer .deviceCheckbox {
+  width: fit-content;
+  position: relative;
+}
+
+.treeContainer .deviceCheckbox:hover {
+  background-color: rgba(168, 164, 164, 0.733);
+}
+
+.treeContainer .deviceCheckbox .hiddenBox {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 200px;
+  height: 50px;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+/* .treeContainer .deviceCheckbox:hover .hiddenBox {
+  display: block;
+} */

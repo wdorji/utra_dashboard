@@ -101,7 +101,14 @@ if not su.exist"config" then
     local env,conn = su.open"config"
     conn:execute"CREATE TABLE configs (key INTEGER PRIMARY KEY, fileType TEXT, setting1 TEXT, setting2 TEXT)"
     su.close(env,conn)
- end
+end
+
+if not su.exist"device" then
+    -- Create a database environment object and open data/device.sqlite.db
+    local env,conn = su.open"device"
+    conn:execute"CREATE TABLE devices (key INTEGER PRIMARY KEY, fileName TEXT, filePath TEXT)"
+    su.close(env,conn)
+end
 
 -- Start getting file names functionality
 
@@ -110,6 +117,7 @@ local function send_file_names()
     local function execute(cur) -- su.select() callback function
         local key, fileName, filePath = cur:fetch()
         while key do
+            print(fileName)
             local script = {key = key, fileName= fileName,filePath= filePath}
             smq:publish(ba.json.encode(script), "file_names_response")
             key, fileName, filePath = cur:fetch()
@@ -123,6 +131,28 @@ end
 -- End getting file names functionality
 
 smq:subscribe("file_names_request", {onmsg=send_file_names})
+
+-- Start getting device names functionality
+
+local function send_device_names()
+    local env,conn = su.open"device"
+    local function execute(cur) -- su.select() callback function
+        local key, fileName, filePath = cur:fetch()
+        while key do
+            print(fileName)
+            local script = {key = key, fileName= fileName,filePath= filePath}
+            smq:publish(ba.json.encode(script), "device_names_response")
+            key, fileName, filePath = cur:fetch()
+        end
+    end
+
+    su.select(conn,"key,fileName,filePath FROM devices",execute)
+    su.close(env,conn)
+end
+
+-- End getting device names functionality
+
+smq:subscribe("device_names_request", {onmsg=send_device_names})
 
 local function send_file_content(msg, ftid)
 
@@ -181,6 +211,23 @@ end
 
 smq:subscribe("insert_data_request", {onmsg=insert_config_data, json=true})
 
+local function insert_device_data(msg, ftid)
+
+    local fileName=luasql.quotestr(msg.fileName)-- Quote msg and prevent SQL injection by escaping any ' characters
+    local filePath=luasql.quotestr(msg.filePath)
+    local sql=string.format("INSERT INTO devices (fileName, filePath) values(%s, %s)",fileName, filePath)
+    local env,conn = su.open"device"
+    local ok,err=conn:execute(sql) -- Insert msg into database
+    if ok then
+        print("Data inserted!")
+        print(msg)
+    else
+        trace("Inserting DB failed",err)
+    end
+    su.close(env,conn)
+end
+
+smq:subscribe("insert_device_data_request", {onmsg=insert_device_data, json=true})
 
 local function overwrite_file_content(msg, ftid)
 
@@ -281,4 +328,12 @@ end
 smq:subscribe("parameters_request", {onmsg=send_parameters})
 
 
+
+local function send_device_status(msg, ftid)
+    local current_time = os.date("%H:%M:%S")
+    local device_status = {fileName= msg, data = current_time}
+    smq:publish(ba.json.encode(device_status), "device_check_response")
+end
+
+smq:subscribe("device_check_request", {onmsg=send_device_status})
 

@@ -48,26 +48,6 @@
         var smq = SMQ.Client(SMQ.wsURL("/QPCSBroker/"));
         // var smq = SMQ.Client("wss://simplemq.com/smq.lsp");
 
-        function insertRows() {
-          var seconds = 0;
-          var interval = setInterval(function () {
-            seconds++;
-            const curRow = {
-              time: seconds.toString(),
-              state: "inter_obs",
-              elapsed: seconds.toString(),
-            };
-
-            smq.pubjson(curRow, "tableView");
-
-            if (seconds > 20) {
-              clearInterval(interval);
-            }
-          }, 1000);
-
-          return false;
-        }
-
         //create Tabulator on DOM element with id "example-table"
         var table = new Tabulator("#example-table", {
           height: 200, // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
@@ -82,14 +62,14 @@
               width: 450,
             },
             {
-              title: "State",
-              field: "state",
+              title: "Name",
+              field: "name",
               hozAlign: "center",
               width: 450,
             },
             {
-              title: "Elapsed",
-              field: "elapsed",
+              title: "Data",
+              field: "data",
               hozAlign: "center",
               width: 480,
             },
@@ -98,7 +78,7 @@
 
         function onValueUpdate(msg, ftid) {
           table.addData(
-            [{ time: msg.time, state: msg.state, elapsed: msg.elapsed }],
+            [{ time: msg.time, name: msg.name, data: msg.data }],
             false
           );
         }
@@ -108,7 +88,9 @@
           alert("Row " + row.getData().id + " Clicked!!!!");
         });
 
-        smq.subscribe("tableView", { onmsg: onValueUpdate, datatype: "json" });
+
+
+        // smq.subscribe("tableView", { onmsg: onValueUpdate, datatype: "json" });
 
         function onNavNames(msg, ftid) {
           const navList = document.getElementsByClassName("nav__list")[0];
@@ -130,7 +112,7 @@
           }
         }
 
-        function onFileName(msg, ftid) {
+        function onDeviceName(msg, ftid) {
           console.log(msg);
           const fileName = msg.fileName; // Extract file name from path
           const filePath = msg.filePath;
@@ -138,7 +120,7 @@
 
           const directories = filePath.split("/").slice(0, -1);
 
-          var uiElement = $(".sidebar");
+          var uiElement = $(".treeContainer");
           var spacing = 0;
 
           if (directories.length !== 0) {
@@ -180,28 +162,87 @@
           }
 
           const button = document.createElement("div");
-          button.textContent = fileName;
-          button.className = "fileButton";
+          // button.textContent = fileName;
+          button.className = "deviceCheckbox";
+
+          
+   
+          
           button.style.marginLeft = spacing;
+
+          const deviceCheckbox = document.createElement("input");
+          deviceCheckbox.type = "checkbox";
+          deviceCheckbox.textContent = fileName;
+
+          deviceCheckbox.addEventListener("click", function() {
+
+            if (deviceCheckbox.checked){
+              smq.subscribe(fileName+"tableView", {
+                onmsg: onValueUpdate,
+                datatype: "json",
+              });
+
+            }
+            else{
+              smq.unsubscribe(fileName+"tableView");
+            }
+          });
+          
+
+          
+
+
+          const checkboxLabel = document.createElement("label");
+          checkboxLabel.textContent = fileName + ":";
+
+          deviceCheckbox.style.marginLeft = 5
+          button.append(checkboxLabel)
+
+          button.append(deviceCheckbox)
+
+          const hiddenBox = document.createElement("div");
+          hiddenBox.textContent = fileName
+
+          hiddenBox.className = "hiddenBox"
+          hiddenBox.id = "hiddenBox"+fileName
+
+          button.append(hiddenBox)
+
+          button.addEventListener('mouseover', function() {
+
+            smq.publish(fileName, "device_check_request");
+            hiddenBox.style.display = 'block';
+          });
+
+          button.addEventListener('mouseout', function() {
+
+            hiddenBox.style.display = 'none';
+          });
 
           button.setAttribute("data-filename", fileName); // Set data attribute for filename
           button.setAttribute("data-key", key); // Set data attribute for key
-          button.addEventListener("click", function () {
-            createTabButton(
-              button.getAttribute("data-filename"),
-              button.getAttribute("data-key")
-            );
-          });
 
           uiElement.append(button);
         }
 
-        smq.subscribe("file_names_response", {
-          onmsg: onFileName,
+        function onDeviceCheck(msg, ftid){
+          const hbox = document.getElementById("hiddenBox"+msg.fileName)
+          hbox.textContent = msg.fileName + " status: " + msg.data
+        
+        }
+
+
+        smq.subscribe("device_check_response", {
+            onmsg: onDeviceCheck,
+            datatype: "json",
+        })
+
+        smq.subscribe("device_names_response", {
+          onmsg: onDeviceName,
           datatype: "json",
         });
 
-        smq.publish("signal", "file_names_request");
+        smq.publish("signal", "device_names_request");
 
         smq.subscribe("nav_items_response", {
           onmsg: onNavNames,
@@ -209,8 +250,6 @@
         });
 
         smq.publish("signal", "nav_names_request");
-
-        $("#table").click(insertRows);
       });
     </script>
   </head>
@@ -228,7 +267,7 @@
       ESS Viewer
     </h1> -->
 
-    <div class="sidebar" ><h3 >Display options:</h1></div>
+    <div class="treeContainer" ><h3 >Display options:</h1></div>
     </div>
 
     <div id="example-table" style="margin: 3%; height: 500px"></div>

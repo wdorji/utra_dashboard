@@ -55,6 +55,25 @@
         }
 
         $("#insertData").click(insertScript);
+
+        function insertDeviceData() {
+          var fileName = document.getElementById("devinput1").value.trim();
+          var filePath = document.getElementById("devinput2").value.trim();
+
+          if (fileName !== "") {
+            const dataJson = {
+              fileName: fileName,
+              filePath: filePath,
+            };
+
+            smq.pubjson(dataJson, "insert_device_data_request");
+          } else {
+            // Display an error message or take appropriate action
+            alert("Please specify a name for file!");
+          }
+        }
+
+        $("#insertDevData").click(insertDeviceData);
       });
     </script>
   </head>
@@ -74,6 +93,12 @@
       <input type="text" id="input2" placeholder="Enter filepath" />
       <div id="editor"></div>
       <button id="insertData">Insert Data</button>
+    </div>
+
+    <div style="margin-top: 2%">
+      <input type="text" id="devinput1" placeholder="Enter filename" />
+      <input type="text" id="devinput2" placeholder="Enter filepath" />
+      <button id="insertDevData">Insert Tree Device Data</button>
     </div>
 
     <script src="editor.bundle.js"></script>
